@@ -11,11 +11,12 @@ int main()
     ifstream fin(in_file);
     ofstream fout(out_file);
 
+    fout << "\"prefix\": \"#\",\n";
     fout << "\"body\": [\n";
 
     string line;
     while (getline(fin, line))
         fout << '\"' << line << "\",\n";
 
-    fout << "],";
+    fout << "]";
 }

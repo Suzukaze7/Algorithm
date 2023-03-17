@@ -2,7 +2,6 @@
   - [KMP](#kmp)
   - [Trie树](#trie树)
   - [AC自动机](#ac自动机)
-    - [矩阵快速幂](#矩阵快速幂)
   - [Border/Fail树的一些性质](#borderfail树的一些性质)
     - [求串的出现次数](#求串的出现次数)
     - [树中节点到根节点的路径上全部加1](#树中节点到根节点的路径上全部加1)
@@ -88,7 +87,7 @@ struct ACAM
     char s[M];
     int tr[M][26], idx;
     int ne[M], cnt[M], to[N], from[M];
-    vector<int> fail[N];
+    vector<int> fail[M];
 
     void insert(int k)
     {
@@ -140,47 +139,6 @@ struct ACAM
 };
 ```
 
-### 矩阵快速幂
-- 解决一些通过**状态机dp**求不能出现某些串的字符串方案数
-  - 模板题都可以优化
-  - 当要求构造的字符串需要由一些串构成，且这些串长度仅为1, 2时，可以优化
-```cpp
-namespace
-{
-    using ll = long long;
-    using Col = vector<int>;
-    using Mat = vector<Col>;
-
-    void turn_E(Mat &a)
-    {
-        for (int i = 0; i < a.size(); ++i)
-            for (int j = 0; j < a[i].size(); ++j)
-                a[i][j] = (i == j);
-    }
-    Mat operator*(const Mat &a, const Mat &b)
-    {
-        Mat res = Mat(a.size(), Col(b.front().size()));
-        for (int i = 0; i < a.size(); ++i)
-            for (int j = 0, k; j < b.front().size(); ++j)
-                for (k = res[i][j] = 0; k < a.front().size(); ++k)
-                    res[i][j] = (res[i][j] + (ll)a[i][k] * b[k][j]) % mod;
-        return res;
-    }
-    Mat operator^(Mat a, ll n)
-    {
-        Mat res = a;
-        turn_E(res);
-        while (n)
-        {
-            if (n & 1) res = res * a;
-            a = a * a;
-            n >>= 1;
-        }
-        return res;
-    }
-}
-```
-
 ## Border/Fail树的一些性质
 ### 求串的出现次数
 1. 首先，一个串的所有子串，等价于这个串**所有前缀**的**所有后缀**
@@ -208,22 +166,10 @@ namespace
 struct Manacher
 {
     int size;
-    char s[N];
+    char s[N], t[N];
     int p, r, len[N];
 
-    void init()
-    {
-        for (int i = 1, j = 1; i <= n; i++)
-        {
-            s[j++] = '#';
-            s[j++] = t[i];
-        }
-
-        size = 2 * n + 1;
-        s[size] = '#';
-    }
-
-    void get(int k, int x = 1)
+    void get(int k, int x)
     {
         for (; 1 <= k - x && k + x <= size; x++)
             if (s[k - x] != s[k + x])
@@ -239,17 +185,21 @@ struct Manacher
 
     void op()
     {
+        s[++size] = '#';
+        for (int i = 1; t[i]; i++)
+        {
+            s[++size] = t[i];
+            s[++size] = '#';
+        }
+
         for (int i = 1; i <= size; i++)
         {
             if (i > r)
-                get(i);
+                get(i, 0);
             else
             {
-                int sym = 2 * p - i;
-                if (p - len[p] < sym - len[sym])
-                    len[i] = len[sym];
-                else
-                    get(i, sym - p + len[p]);
+                int sym = p * 2 - i;
+                get(i, min(len[sym], sym - p + len[p]));
             }
         }
     }
@@ -270,12 +220,6 @@ struct PAM
         idx = 2;
         len[1] = -1;
         ne[0] = 1;
-    }
-
-    void init()
-    {
-        last = tot = 1;
-        size = strlen(s + 1);
     }
 
     int get_next(int x)
@@ -301,6 +245,8 @@ struct PAM
 
     void op()
     {
+        size = strlen(s + 1);
+        last = tot = 1;
         for (; tot <= size; tot++)
             insert();
     }
@@ -321,19 +267,14 @@ for (int i = last; i > 1; i = slink[i])
 - “区间可加性”：
     有一组排序过的字符串$A=[A_1,A_2,\cdots,A_n]$，对于任意的$k\in[i,j]$
     $$
-    \begin{equation}
-    \begin{split}
-        LCP(A_i A_j)&=LCP(LCP(A_i,A_k),LCP(A_k,A_j))\\
-        &=min(LCP(A_i, A_k),LCP(A_k, A_j))\\
-        &=min(LCP(A_i,A_{i+1}),\cdots,LCP(A_{j-1},A_j))
-    \end{split}
-    \end{equation}
+    LCP(A_i A_j)=min(LCP(A_i,A_{i+1}),\cdots,LCP(A_{j-1},A_j))
     $$
 - `Height`数组：$Height[i]\geq Height[i-1]-1$
+- 多字符串拼接一定要插入一个不在字符集的字符，如果是多于两个字符串，还需要存每个位置原本的后缀长度
 ```cpp
 struct SA
 {
-    int size, m;
+    int size;
     char s[N];
     int sa[N], rk[N], oldrk[N << 1], cnt[N], id[N], height[N];
 
@@ -349,7 +290,7 @@ struct SA
     void op()
     {
         size = strlen(s + 1);
-        m = 127;
+        int m = 127;
 
         for (int i = 1; i <= size; i++)
             cnt[oldrk[i] = s[i]]++;
@@ -375,7 +316,7 @@ struct SA
 
             memset(cnt + 1, 0, sizeof(int) * m);
             for (i = 1; i <= size; i++)
-                cnt[rk[id[i]]]++;
+                cnt[rk[i]]++;
             for (i = 1; i <= m; i++)
                 cnt[i] += cnt[i - 1];
             for (i = size; i; i--)

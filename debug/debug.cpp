@@ -3,7 +3,7 @@
 
 using namespace std;
 
-#define debug(args...) clog << ".." << __LINE__ << "..\t"#args" = ", _debug(args)
+#define debug(_args...) clog << ".." << __LINE__ << "..\t"#_args" = ", _debug(_args)
 
 template<typename T> struct is_pair: false_type { };
 template<typename X, typename Y> struct is_pair<pair<X, Y>>: true_type { };
@@ -13,55 +13,52 @@ template<size_t U> struct is_string<char[U]>: true_type { };
 template<> struct is_string<string>: true_type { };
 template<> struct is_string<char *>: true_type { };
 
-string _res;
-template<typename T> void _read(const T &t) { _res += t; }
-void _set() { _res.pop_back(); _res.pop_back(); }
+template<typename T> void _read(const T &t) { clog << t; }
 
 template<typename T, typename U = size_t, typename ...O>
-void _print(const T &arg, const U &len = -1, const O &...oths)
+void _print(const T &arg, const bool flag = true, const U &len = -1, const O &...oths)
 {
+    if (flag)
+        _read(", ");
+
     if constexpr (is_arithmetic<T>::value)
-        if constexpr (__is_char<T>::__value)
-            _read(arg);
-        else
-            _read(to_string(arg));
+        _read(arg);
     else
     {
         if constexpr (is_pair<T>::value)
         {
-            _read("[ ");
-            _print(arg.first, len, oths...);
+            _read("(");
+            _print(arg.first, false, len, oths...);
             _print(arg.second, len, oths...);
-            _set(); _read(" ]");
+            _read(")");
         }
         else
         {
             if constexpr (is_string<T>::value)
-                _read(string("\"") + arg + "\"");
+                _read("\"" + string(arg) + "\"");
             else
             {
-                _read("{ ");
+                _read("[");
                 int i = 0;
                 for (auto &x : arg)
                     if (++i <= len)
-                        _print(x, oths...);
+                        _print(x, i != 1, oths...);
                     else
                         break;
-                _set(); _read(" }");
+                _read("]");
             }
         }
     }
-    _read(", ");
 }
 
 template<typename T, typename ...U>
 void _debug(const T &_arg, const U &...oths)
 {
-    _res.clear();
     if constexpr (is_arithmetic<T>::value || is_pair<T>::value || is_string<T>::value)
-        _print(_arg), (..., _print(oths));
+        _print(_arg, false), (..., _print(oths));
     else
-        _print(_arg, oths...);
-    _set();
-    clog << _res << endl;
+        _print(_arg, false, oths...);
+    clog << endl;
 }
+
+void _debug() { clog << "--------------\n"; }

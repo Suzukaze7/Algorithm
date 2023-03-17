@@ -11,6 +11,7 @@
 - [左偏树](#左偏树)
 - [点分治](#点分治)
 - [点分树](#点分树)
+  - [Dsu on tree](#dsu-on-tree)
 
 ## LCA
 ```cpp
@@ -35,7 +36,7 @@ struct LCA
 ```cpp
 struct BIT
 {
-    int tr[N];
+    int tr[N], sum;
 
     int lowbit(int x)
     {
@@ -44,7 +45,8 @@ struct BIT
 
     void add(int k, int x)
     {
-        for (int i = k; i <= n; i += lowbit(i))
+        sum += x;
+        for (int i = k; i < N; i += lowbit(i))
             tr[i] += x;
     }
 
@@ -55,50 +57,58 @@ struct BIT
             res += tr[i];
         return res;
     }
+
+    int query_rev(int k)
+    {
+        return sum - query(k - 1);
+    }
 };
 ```
 
 ## 线段树
-- 区间修改
 ```cpp
 struct SegTree
 {
+    struct Val { };
+    struct Lazy { };
+
     struct Node
     {
         int l, r;
-        ll sum, lazy;
+        Val val;
+        Lazy lazy;
     }tr[N << 2];
+
+    // 区间合并
+    Val merge(Val x, Val y)
+    {
+    }
+
+    // 加懒标记
+    void add(int u, Lazy lazy)
+    {
+    }
 
     void push_up(int u)
     {
-        tr[u].sum = tr[u << 1].sum + tr[u << 1 | 1].sum;
-    }
-
-    void add(int u, ll x)
-    {
-        tr[u].sum += (tr[u].r - tr[u].l + 1) * x;
-        tr[u].lazy += x;
+        auto &p = tr[u], &l = tr[u << 1], &r = tr[u << 1 | 1];
+        p.val = merge(l.val, r.val);
     }
 
     void push_down(int u)
     {
-        if (tr[u].lazy)
-        {
-            add(u << 1, tr[u].lazy);
-            add(u << 1 | 1, tr[u].lazy);
-            tr[u].lazy = 0;
-        }
+        auto &p = tr[u];
+        add(u << 1, p.lazy);
+        add(u << 1 | 1, p.lazy);
+        p.lazy = {};
     }
 
     void build(int u, int l, int r)
     {
-        if (l == r)
-        {
-            tr[u] = { l, r, a[l] };
-            return;
-        }
-
         tr[u] = { l, r };
+
+        if (l == r)
+            return;
 
         int mid = l + r >> 1;
         build(u << 1, l, mid);
@@ -107,11 +117,11 @@ struct SegTree
         push_up(u);
     }
 
-    void modify(int u, int l, int r, ll k)
+    void modify(int u, int l, int r, int x)
     {
         if (l <= tr[u].l && tr[u].r <= r)
         {
-            add(u, k);
+            add(u, { });
             return;
         }
 
@@ -119,26 +129,26 @@ struct SegTree
 
         int mid = tr[u].l + tr[u].r >> 1;
         if (l <= mid)
-            modify(u << 1, l, r, k);
+            modify(u << 1, l, r, x);
         if (mid < r)
-            modify(u << 1 | 1, l, r, k);
+            modify(u << 1 | 1, l, r, x);
 
         push_up(u);
     }
 
-    ll query(int u, int l, int r)
+    Val query(int u, int l, int r)
     {
         if (l <= tr[u].l && tr[u].r <= r)
-            return tr[u].sum;
+            return tr[u].val;
 
         push_down(u);
 
-        ll res = 0;
         int mid = tr[u].l + tr[u].r >> 1;
+        Val res = {};
         if (l <= mid)
-            res += query(u << 1, l, r);
+            res = query(u << 1, l, r);
         if (mid < r)
-            res += query(u << 1 | 1, l, r);
+            res = merge(res, query(u << 1 | 1, l, r));
 
         return res;
     }
@@ -334,22 +344,80 @@ struct Splay
 - 每次合并两个集合时，将**较小的**集合合并到**较大的**集合，时间复杂度为$O(n\log n)$
 
 ## 莫队
+```cpp
+namespace
+{
+    int part, sum;
+    int cnt[N], res[N];
 
+    int get(int x)
+    {
+        return x / part;
+    }
+
+    struct Query
+    {
+        int l, r, idx;
+
+        bool operator<(const Query &y) const
+        {
+            if (get(l) != get(y.l))
+                return get(l) < get(y.l);
+            return r < y.r;
+        }
+    }q[N];
+
+    void add(int k)
+    {
+        int x = a[k];
+    }
+
+    void del(int k)
+    {
+        int x = a[k];
+    }
+
+    void solve()
+    {
+        part = sqrt(n);
+        sort(q + 1, q + 1 + m);
+
+        int l = 1, r = 0;
+        for (int i = 1; i <= m; i++)
+        {
+            auto &t = q[i];
+
+            while (l < t.l)
+                del(l++);
+            while (t.l < l)
+                add(--l);
+            while (r < t.r)
+                add(++r);
+            while (t.r < r)
+                del(r--);
+
+            res[t.idx] = sum;
+        }
+
+        for (int i = 1; i <= m; i++)
+            cout << res[i] << "\n";
+    }
+}
+```
 
 ## 树链剖分
 ```cpp
 // 树链剖分部分
 struct QTree
 {
-    int a[N];
-    vector<int> tr[N];
-    int idx, dfn[N], first[N], last[N];
-    int size[N], depth[N], top[N], son[N], fa[N];
+    vector<int> h[N];
+    int dfn[N], first[N], last[N], idx;
+    int size[N], depth[N], fa[N], top[N], son[N];
 
     void dfs1(int u, int p)
     {
         size[u] = 1, depth[u] = depth[p] + 1, fa[u] = p;
-        for (auto sn : tr[u])
+        for (auto sn : h[u])
         {
             if (sn == p)
                 continue;
@@ -364,16 +432,16 @@ struct QTree
 
     void dfs2(int u, int t)
     {
-        top[u] = t;
-        dfn[++idx] = u, first[u] = idx;
+        top[u] = t, dfn[++idx] = u, first[u] = idx;
 
         if (son[u])
         {
             dfs2(son[u], t);
-            for (auto sn : tr[u])
+            for (auto sn : h[u])
             {
                 if (sn == fa[u] || sn == son[u])
                     continue;
+
                 dfs2(sn, sn);
             }
         }
@@ -391,37 +459,37 @@ struct QTree
 // 线段树查询部分
 void modify_path(int u, int v, int x)
 {
-    while (qtree.top[u] != qtree.top[v])
+    auto &q = qtree;
+    while (q.top[u] != q.top[v])
     {
-        if (qtree.depth[qtree.top[u]] < qtree.depth[qtree.top[v]])
+        if (q.depth[q.top[u]] < q.depth[q.top[v]])
             swap(u, v);
 
-        int t = qtree.top[u];
-        modify(1, qtree.first[t], qtree.first[u], x);
-        u = qtree.fa[t];
+        modify(1, q.first[q.top[u]], q.first[u], x);
+        u = q.fa[q.top[u]];
     }
 
-    if (qtree.depth[u] > qtree.depth[v])
+    if (q.depth[u] > q.depth[v])
         swap(u, v);
-    modify(1, qtree.first[u], qtree.first[v], x);
+    modify(1, q.first[u], q.first[v], x);
 }
 
-ll query_path(int u, int v)
+Val query_path(int u, int v)
 {
-    ll res = 0;
-    while (qtree.top[u] != qtree.top[v])
+    auto &q = qtree;
+    Val res = {};
+    while (q.top[u] != q.top[v])
     {
-        if (qtree.depth[qtree.top[u]] < qtree.depth[qtree.top[v]])
+        if (q.depth[q.top[u]] < q.depth[q.top[v]])
             swap(u, v);
 
-        int t = qtree.top[u];
-        res += query(1, qtree.first[t], qtree.first[u]);
-        u = qtree.fa[t];
+        res = merge(res, query(1, q.first[q.top[u]], q.first[u]));
+        u = q.fa[q.top[u]];
     }
 
-    if (qtree.depth[u] > qtree.depth[v])
+    if (q.depth[u] > q.depth[v])
         swap(u, v);
-    res += query(1, qtree.first[u], qtree.first[v]);
+    res = merge(res, query(1, q.s[q.first[u]], q.s[q.first[v]]));
 
     return res;
 }
@@ -452,7 +520,6 @@ struct LCT
             add_rev(p.s[1]);
             p.lazy_rev = 0;
         }
-        
     }
 
     void add_rev(int u)
@@ -578,10 +645,7 @@ struct DLX
     void init()
     {
         for (int i = 0; i <= m; i++)
-        {
-            nd[i].l = i - 1, nd[i].r = i + 1;
-            nd[i].u = nd[i].d = i;
-        }
+            nd[i].l = i - 1, nd[i].r = i + 1, nd[i].u = nd[i].d = i;
         nd[0].l = m, nd[m].r = 0;
         idx = m + 1;
     }
@@ -593,7 +657,7 @@ struct DLX
         ndi.row = x, ndi.col = y, ndy.cnt++;
         ndi.u = y, ndi.d = ndy.d, ndy.d = nd[ndi.d].u = idx;
         ndi.l = hh, ndi.r = tt, nd[hh].r = nd[tt].l = idx;
-        tt = idx++;
+        hh = idx++;
     }
 
     void remove(int p)
@@ -665,10 +729,7 @@ struct DLX
     void init()
     {
         for (int i = 0; i <= m; i++)
-        {
-            nd[i].l = i - 1, nd[i].r = i + 1;
-            nd[i].u = nd[i].d = i;
-        }
+            nd[i].l = i - 1, nd[i].r = i + 1, nd[i].u = nd[i].d = i;
         nd[0].l = m, nd[m].r = 0;
         idx = m + 1;
     }
@@ -680,7 +741,7 @@ struct DLX
         ndi.row = x, ndi.col = y, ndy.cnt++;
         ndi.u = y, ndi.d = ndy.d, ndy.d = nd[ndi.d].u = idx;
         ndi.l = hh, ndi.r = tt, nd[hh].r = nd[tt].l = idx;
-        tt = idx++;
+        hh = idx++;
     }
 
     void remove(int p)
@@ -706,7 +767,6 @@ struct DLX
                 for (int j = nd[i].d; j != i; j = nd[j].d)
                     for (int k = nd[j].r; k != j; k = nd[k].r)
                         book[nd[k].col] = true;
-
                 cnt++;
             }
 
@@ -784,122 +844,104 @@ struct LeftTree
 ```
 
 ## 点分治
+- 性质：重心的所有子树的点数$\leq n/2$
 ```cpp
 int h[N], e[N << 1], ne[N << 1], w[N << 1], idx;
 bool book[N];
 int p[N], q[N];
 
-void add(int a, int b, int c)
+namespace
 {
-    e[idx] = b, ne[idx] = h[a], w[idx] = c, h[a] = idx++;
-}
-
-int get_size(int u, int p)
-{
-    if (book[u])
-        return 0;
-
-    int sum = 1;
-    for (int i = h[u]; ~i; i = ne[i])
+    void add(int a, int b, int c)
     {
-        int j = e[i];
-        if (j == p)
-            continue;
-        sum += get_size(j, u);
+        e[idx] = b, ne[idx] = h[a], w[idx] = c, h[a] = idx++;
     }
 
-    return sum;
-}
-
-int get_wc(int u, int p, int tot, int &wc)
-{
-    if (book[u])
-        return 0;
-
-    int sum = 1, ms = 0;
-    for (int i = h[u]; ~i; i = ne[i])
+    int get_size(int u, int p)
     {
-        int j = e[i];
-        if (j == p)
-            continue;
+        if (book[u])
+            return 0;
 
-        int t = get_wc(j, u, tot, wc);
-        ms = max(ms, t);
-        sum += t;
+        int sum = 1;
+        for (int i = h[u]; ~i; i = ne[i])
+        {
+            int j = e[i];
+            if (j == p)
+                continue;
+            sum += get_size(j, u);
+        }
+
+        return sum;
     }
 
-    ms = max(ms, tot - sum);
-    if (ms <= tot >> 1)
-        wc = u;
-
-    return sum;
-}
-
-void get_dist(int u, int p, int dist, int &qt)
-{
-    if (book[u])
-        return;
-
-    if (dist <= k)
-        q[++qt] = dist;
-    else
-        return;
-
-    for (int i = h[u]; ~i; i = ne[i])
+    int get_wc(int u, int p, int tot, int &wc)
     {
-        int j = e[i];
-        if (j == p)
-            continue;
-        get_dist(j, u, dist + w[i], qt);
-    }
-}
+        if (book[u])
+            return 0;
 
-int get(int q[], int qt)
-{
-    sort(q + 1, q + 1 + qt);
+        int sum = 1, ms = 0;
+        for (int i = h[u]; ~i; i = ne[i])
+        {
+            int j = e[i];
+            if (j == p)
+                continue;
 
-    int res = 0;
-    for (int i = qt, j = 0; i > 0; i--)
-    {
-        while (j + 1 < i && q[j + 1] + q[i] <= k)
-            j++;
-        res += min(i - 1, j);
+            int t = get_wc(j, u, tot, wc);
+            ms = max(ms, t);
+            sum += t;
+        }
+
+        ms = max(ms, tot - sum);
+        if (ms <= tot / 2)
+            wc = u;
+
+        return sum;
     }
 
-    return res;
-}
-
-int calc(int u)
-{
-    if (book[u])
-        return 0;
-
-    get_wc(u, -1, get_size(u, -1), u);
-    book[u] = true;
-
-    int res = 0, pt = 0;
-    for (int i = h[u]; ~i; i = ne[i])
+    void get_dist(int u, int p, int &qt) // ...
     {
-        int j = e[i], qt = 0;
-        get_dist(j, u, w[i], qt);
-
-        res -= get(q, qt);
-        res += qt;
-        for (int i = 1; i <= qt; i++)
-            p[++pt] = q[i];
+        if (book[u])
+            return;
+        // 在此特判子树到重心
     }
 
-    res += get(p, pt);
-    for (int i = h[u]; ~i; i = ne[i])
-        res += calc(e[i]);
+    int get(int q[], int qt)
+    {
+        sort(q + 1, q + 1 + qt);
+        // ...
+    }
 
-    return res;
+    int calc(int u)
+    {
+        if (book[u])
+            return 0;
+
+        get_wc(u, -1, get_size(u, -1), u);
+        book[u] = true;
+
+        int res = 0, pt = 0;
+        for (int i = h[u]; ~i; i = ne[i])
+        {
+            int j = e[i], qt = 0;
+            get_dist(j, u, qt);
+
+            res -= get(q, qt);
+            for (int i = 1; i <= qt; i++)
+                p[++pt] = q[i];
+        }
+
+        res += get(p, pt);
+        for (int i = h[u]; ~i; i = ne[i])
+            res += calc(e[i]);
+
+        return res;
+    }
 }
 ```
 
 ## 点分树
 ```cpp
-struct CD
+namespace
 {
     int h[N], e[N << 1], ne[N << 1], w[N << 1], idx;
     int age[N];
@@ -1013,4 +1055,28 @@ struct CD
             calc(e[i]);
     }
 };
+```
+
+### Dsu on tree
+```cpp
+bool book[N];
+void dfs(int u, bool del)
+{
+    if (!del)
+    {
+        book[u] = true;
+        st.modify(1, qt.depth[u], qt.depth[u], a[u]);
+    }
+    else
+        book[u] = false;
+ 
+    for (auto sn : qt.h[u])
+    {
+        if (sn == qt.fa[u])
+            continue;
+ 
+        if (del == book[sn])
+            dfs(sn, del);
+    }
+}
 ```

@@ -1,0 +1,16 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "${workspaceFolder}/**"
+            ],
+            "compilerArgs": [
+                "-std=c++17",
+                "-include",
+                "E:\\Algorithm\\debug\\debug.cpp"
+            ]
+        }
+    ],
+    "version": 4
+}
