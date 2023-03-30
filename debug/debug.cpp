@@ -3,7 +3,7 @@
 
 using namespace std;
 
-#define debug(_args...) clog << ".." << __LINE__ << "..\t"#_args" = ", _debug(_args)
+#define debug(args...) clog << ".." << __LINE__ << "..\t", _idx = 0, _names = #args, _debug(args)
 
 template<typename T> struct is_pair: false_type { };
 template<typename X, typename Y> struct is_pair<pair<X, Y>>: true_type { };
@@ -16,7 +16,7 @@ template<> struct is_string<char *>: true_type { };
 template<typename T> void _read(const T &t) { clog << t; }
 
 template<typename T, typename U = size_t, typename ...O>
-void _print(const T &arg, const bool flag = true, const U &len = -1, const O &...oths)
+void _print(const T &arg, const bool flag, const U &len = -1, const O &...oths)
 {
     if (flag)
         _read(", ");
@@ -29,7 +29,7 @@ void _print(const T &arg, const bool flag = true, const U &len = -1, const O &..
         {
             _read("(");
             _print(arg.first, false, len, oths...);
-            _print(arg.second, len, oths...);
+            _print(arg.second, true, len, oths...);
             _read(")");
         }
         else
@@ -51,13 +51,33 @@ void _print(const T &arg, const bool flag = true, const U &len = -1, const O &..
     }
 }
 
+int _idx, _flag;
+string _names;
 template<typename T, typename ...U>
-void _debug(const T &_arg, const U &...oths)
+void __print(const T &arg, const bool flag, U ...args)
+{
+    if (flag)
+        _read(", ");
+
+    while (_flag || _names[_idx] != ',' && _idx < _names.size())
+    {
+        if (_names[_idx] == '(' || _names[_idx] == ')')
+            _flag = _names[_idx] == '(';
+        _read(_names[_idx++]);
+    }
+    _read(" = ");
+    _idx += 2;
+
+    _print(arg, false, args...);
+}
+
+template<typename T, typename ...U>
+void _debug(const T &arg, const U &...oths)
 {
     if constexpr (is_arithmetic<T>::value || is_pair<T>::value || is_string<T>::value)
-        _print(_arg, false), (..., _print(oths));
+        __print(arg, false), (..., __print(oths, true));
     else
-        _print(_arg, false, oths...);
+        __print(arg, false, oths...);
     clog << endl;
 }
 

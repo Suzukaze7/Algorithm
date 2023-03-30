@@ -5,9 +5,7 @@
 ```cpp
 template<class Int>
 void read(Int &x)
-{- [快读/int\_128](#快读int_128)
-- [矩阵快速幂](#矩阵快速幂)
-
+{
     x = 0;
     int f = 1;
     char c = getchar();
@@ -31,7 +29,7 @@ void print(Int x)
     if (x < 0)
         putchar('-'), x = -x;
     if (x > 9)
-        write(x / 10);
+        print(x / 10);
     putchar(x % 10 + '0');
 }
 ```

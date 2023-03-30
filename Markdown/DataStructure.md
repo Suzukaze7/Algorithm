@@ -846,96 +846,113 @@ struct LeftTree
 ## 点分治
 - 性质：重心的所有子树的点数$\leq n/2$
 ```cpp
-int h[N], e[N << 1], ne[N << 1], w[N << 1], idx;
 bool book[N];
-int p[N], q[N];
 
-namespace
+int get_size(int u, int p)
 {
-    void add(int a, int b, int c)
+    if (book[u])
+        return 0;
+
+    int sum = 1;
+    for (auto sn : h[u])
     {
-        e[idx] = b, ne[idx] = h[a], w[idx] = c, h[a] = idx++;
+        if (sn == p)
+            continue;
+
+        sum += get_size(sn, u);
     }
 
-    int get_size(int u, int p)
+    return sum;
+}
+
+int get_wc(int u, int p, int tot, int &wc)
+{
+    if (book[u])
+        return 0;
+
+    int sum = 1, maxv = 0;
+    for (auto sn : h[u])
     {
-        if (book[u])
-            return 0;
+        if (sn == p)
+            continue;
 
-        int sum = 1;
-        for (int i = h[u]; ~i; i = ne[i])
-        {
-            int j = e[i];
-            if (j == p)
-                continue;
-            sum += get_size(j, u);
-        }
-
-        return sum;
+        int t = get_wc(sn, u, tot, wc);
+        sum += t;
+        maxv = max(maxv, t);
     }
 
-    int get_wc(int u, int p, int tot, int &wc)
+    maxv = max(maxv, tot - sum);
+    if (maxv <= tot >> 1)
+        wc = u;
+
+    return sum;
+}
+
+void get(int u, int p, int depth, Node q[], int &qt)
+{
+    if (book[u])
+        return;
+
+    q[++qt] = { a[u], a[u] * depth % mod, depth };
+
+    for (auto sn : h[u])
     {
-        if (book[u])
-            return 0;
+        if (sn == p)
+            continue;
 
-        int sum = 1, ms = 0;
-        for (int i = h[u]; ~i; i = ne[i])
-        {
-            int j = e[i];
-            if (j == p)
-                continue;
-
-            int t = get_wc(j, u, tot, wc);
-            ms = max(ms, t);
-            sum += t;
-        }
-
-        ms = max(ms, tot - sum);
-        if (ms <= tot / 2)
-            wc = u;
-
-        return sum;
+        get(sn, u, depth + 1, q, qt);
     }
+}
 
-    void get_dist(int u, int p, int &qt) // ...
-    {
-        if (book[u])
-            return;
-        // 在此特判子树到重心
-    }
+int calc(int u)
+{
+    if (book[u])
+        return 0;
 
-    int get(int q[], int qt)
+    get_wc(u, 0, get_size(u, 0), u);
+    book[u] = true;
+
+    int pt = 0, res = 0;
+    for (auto sn : h[u])
     {
+        int qt = 0;
+        get(sn, u, 1, q, qt);
         sort(q + 1, q + 1 + qt);
-        // ...
-    }
 
-    int calc(int u)
-    {
-        if (book[u])
-            return 0;
+        for (int i = 1; i <= qt; i++)
+            p[++pt] = q[i];
 
-        get_wc(u, -1, get_size(u, -1), u);
-        book[u] = true;
-
-        int res = 0, pt = 0;
-        for (int i = h[u]; ~i; i = ne[i])
+        for (int i = 1; i <= qt; i++)
         {
-            int j = e[i], qt = 0;
-            get_dist(j, u, qt);
-
-            res -= get(q, qt);
-            for (int i = 1; i <= qt; i++)
-                p[++pt] = q[i];
+            q[i].v = (q[i].v + q[i - 1].v) % mod;
+            q[i].mul = (q[i].mul + q[i - 1].mul) % mod;
         }
-
-        res += get(p, pt);
-        for (int i = h[u]; ~i; i = ne[i])
-            res += calc(e[i]);
-
-        return res;
+        for (int i = qt; i; i--)
+        {
+            auto &t = q[i];
+            res = (res - t.mul - t.v * t.dep) % mod;
+        }
     }
+
+    for (int i = 1; i <= pt; i++)
+        res = (res + min(a[u], p[i].v) * p[i].dep) % mod;
+
+    sort(p + 1, p + 1 + pt);
+    for (int i = 1; i <= pt; i++)
+    {
+        p[i].v = (p[i].v + p[i - 1].v) % mod;
+        p[i].mul = (p[i].mul + p[i - 1].mul) % mod;
+    }
+    for (int i = pt; i; i--)
+    {
+        auto &t = p[i];
+        res = (res + t.mul + t.v * t.dep) % mod;
+    }
+
+    for (auto sn : h[u])
+        res = (res + calc(sn)) % mod;
+
+    return res;
 }
 ```
 
@@ -943,7 +960,6 @@ namespace
 ```cpp
 namespace
 {
-    int h[N], e[N << 1], ne[N << 1], w[N << 1], idx;
     int age[N];
     bool book[N];
 
@@ -1060,15 +1076,19 @@ namespace
 ### Dsu on tree
 ```cpp
 bool book[N];
+int res[N];
 void dfs(int u, bool del)
 {
-    if (!del)
+    if (del)
     {
-        book[u] = true;
-        st.modify(1, qt.depth[u], qt.depth[u], a[u]);
+        book[u] = false;
+        bit.add(a[u], -1);
     }
     else
-        book[u] = false;
+    {
+        book[u] = true;
+        bit.add(a[u], 1);
+    }
  
     for (auto sn : qt.h[u])
     {
@@ -1077,6 +1097,21 @@ void dfs(int u, bool del)
  
         if (del == book[sn])
             dfs(sn, del);
+    }
+}
+
+void solve()
+{
+    for (int i = n; i; i--)
+    {
+        int u = qt.dfn[i];
+        dfs(u, false);
+
+        for (auto t : q[u])
+            res[t.idx] = bit.query(t.k);
+
+        if (qt.top[u] == u)
+            dfs(u, true);
     }
 }
 ```
