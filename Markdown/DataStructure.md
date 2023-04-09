@@ -12,6 +12,7 @@
 - [点分治](#点分治)
 - [点分树](#点分树)
   - [Dsu on tree](#dsu-on-tree)
+  - [用两个优先队列实现可删除堆](#用两个优先队列实现可删除堆)
 
 ## LCA
 ```cpp
@@ -1114,4 +1115,30 @@ void solve()
             dfs(u, true);
     }
 }
+```
+
+### 用两个优先队列实现可删除堆
+```cpp
+struct Heap
+{
+    priority_queue<int> heap, del;
+ 
+    int top()
+    {
+        while (heap.size() && del.size() && heap.top() == del.top())
+            heap.pop(), del.pop();
+ 
+        return heap.size() ? heap.top() : 0;
+    }
+ 
+    void add(int x)
+    {
+        heap.push(x);
+    }
+ 
+    void remove(int x)
+    {
+        del.push(x);
+    }
+};
 ```
