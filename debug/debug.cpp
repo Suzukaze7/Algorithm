@@ -6,13 +6,10 @@
 #include<queue>
 
 #define LEN 1
-#define debug(args...) suzukaze::_debug(__LINE__, #args, ##args)
+#define debug(...) suzukaze::_debug(__LINE__, #__VA_ARGS__ __VA_OPT__(,) __VA_ARGS__)
 
 namespace suzukaze
 {
-    template<typename> struct is_pair: std::false_type { };
-    template<typename X, typename Y> struct is_pair<std::pair<X, Y>>: std::true_type { };
-
     template<typename T> struct is_string: std::__or_<std::is_same<T, char *>, std::is_same<T, std::string>> { };
     template<size_t U> struct is_string<char[U]>: std::true_type { };
 
@@ -22,20 +19,23 @@ namespace suzukaze
     template<typename, typename = void> struct has_top: std::false_type { };
     template<typename T> struct has_top<T, std::void_t<decltype(std::declval<T>().top())>>: std::true_type { };
 
+    template<typename> struct is_queue: std::false_type { };
+    template<typename T> struct is_queue<std::queue<T>>: std::true_type { };
+
     class _debug
     {
         const std::string blank = std::string(LEN, ' '), sep = "," + blank, equal = blank + '=' + blank;
 
         std::ostringstream out;
         std::string names;
-        int idx, cover;
+        int idx = 0, cover = 0;
 
     public:
         template<typename T, typename ...U>
         _debug(const int line, const char *names, const T &arg, const U &...args): names(names)
         {
             out << ".." << line << "..\t";
-            if constexpr (std::__or_v<std::is_arithmetic<T>, is_pair<T>, is_string<T>>)
+            if constexpr (std::is_arithmetic_v<T> || std::__is_pair<T> || is_string<T>::value)
                 _print(arg, false), (..., _print(args, true));
             else
                 _print(arg, false, args...);
@@ -53,10 +53,8 @@ namespace suzukaze
             _print_sep(flag);
             while (idx < names.size() && (cover || names[idx] != ','))
             {
-                if (names[idx] == '(')
-                    cover = true;
-                else if (names[idx] == ')')
-                    cover = false;
+                cover += names[idx] == '(' || names[idx] == '<';
+                cover -= names[idx] == ')' || names[idx] == '>';
                 out << names[idx++];
             }
             out << equal;
@@ -65,46 +63,39 @@ namespace suzukaze
             __print(arg, args...);
         }
 
-        template<typename T>
-        std::enable_if_t<std::is_arithmetic_v<T>> __print(const T arg) { out << arg; }
-
-        template<typename T>
-        std::enable_if_t<is_string<T>::value> __print(const T &arg) { out << '"' << arg << '"'; }
-
-        template<typename T>
-        std::enable_if_t<is_pair<T>::value> __print(const T &arg)
-        {
-            out << '(' << arg.first << sep << arg.second << ')';
-        }
-
         template<typename T, typename ...U>
-        std::enable_if_t<is_iterable<T>::value && !is_string<T>::value> __print(const T &arg, const int size = INT32_MAX, const U &...args)
+        void __print(const T &arg, const int size = INT_MAX, const U & ...args)
         {
             int cnt = 0;
-            out << '[';
-            for (auto it = std::begin(arg); cnt < size && it != std::end(arg); it++, cnt++)
-                _print_sep(cnt), __print(*it, args...);
-            out << ']';
-        }
-
-        template<typename T, typename ...U>
-        std::enable_if_t<has_top<T>::value> __print(T arg, const int size = INT32_MAX, const U &...args)
-        {
-            int cnt = 0;
-            out << '<';
-            while (cnt < size && arg.size())
-                _print_sep(cnt++), __print(arg.top()), arg.pop();
-            out << '>';
-        }
-
-        template<typename T, typename ...U>
-        void __print(std::queue<T> arg, const int size = INT32_MAX, const U &...args)
-        {
-            int cnt = 0;
-            out << '<';
-            while (cnt < size && arg.size())
-                _print_sep(cnt++), __print(arg.front()), arg.pop();
-            out << '>';
+            if constexpr (std::is_arithmetic_v<T>)
+                out << arg;
+            if constexpr (is_string<T>::value)
+                out << '"' << arg << '"';
+            if constexpr (std::__is_pair<T>)
+                out << '(' << arg.first << sep << arg.second << ')';
+            if constexpr (is_iterable<T>::value && !is_string<T>::value)
+            {
+                out << '[';
+                for (auto it = std::begin(arg); cnt < size && it != std::end(arg); it++, cnt++)
+                    _print_sep(cnt), __print(*it, args...);
+                out << ']';
+            }
+            if constexpr (has_top<T>::value)
+            {
+                auto t = arg;
+                out << '<';
+                while (cnt < size && t.size())
+                    _print_sep(cnt++), __print(t.top()), t.pop();
+                out << '>';
+            }
+            if constexpr (is_queue<T>::value)
+            {
+                auto t = arg;
+                out << '<';
+                while (cnt < size && t.size())
+                    _print_sep(cnt++), __print(t.front()), t.pop();
+                out << '>';
+            }
         }
     };
 }

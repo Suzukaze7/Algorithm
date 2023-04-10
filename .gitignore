@@ -1,8 +1,9 @@
 .cph
 .vscode
-!c_cpp_properties.json
+*.cpp
+*.py
 *.txt
 exe
 out
-/*.cpp
-/*.py
+!cpp_to_json.cpp
+!debug/
