@@ -1,27 +1,19 @@
 #pragma once
 #include<iostream>
 #include<sstream>
-#include<type_traits>
-#include<utility>
-#include<queue>
+#include<concepts>
 
-#define LEN 1
 #define debug(...) suzukaze::_debug(__LINE__, #__VA_ARGS__ __VA_OPT__(,) __VA_ARGS__)
 
 namespace suzukaze
 {
-    template<typename T> constexpr bool is_string = std::__or_<std::is_same<const T, const char *const>, std::is_same<const T, const std::string>>::value;
-    template<size_t U> constexpr bool is_string<char[U]> = std::true_type::value;
-
-    template<typename, typename = void> constexpr bool is_iterable = std::false_type::value;
-    template<typename T> constexpr bool is_iterable<T, std::void_t<decltype(std::begin(std::declval<T &>())), decltype(std::end(std::declval<T &>()))>> = std::true_type::value;
-
-    template<typename, typename = void> constexpr bool has_top = std::false_type::value;
-    template<typename T> constexpr bool has_top<T, std::void_t<decltype(std::declval<T>().top())>> = std::true_type::value;
+    template<typename T> concept string = std::convertible_to<T, std::string>;
+    template<typename T> concept iterable = requires(const T & t) { std::begin(t); std::end(t); };
+    template<typename T> concept has_top = requires(T t) { t.top(); };
 
     class _debug
     {
-        const std::string blank = std::string(LEN, ' '), sep = "," + blank, equal = blank + '=' + blank;
+        const std::string blank = std::string(1, ' '), sep = "," + blank, equal = blank + '=' + blank;
 
         std::ostringstream sout;
         std::string names;
@@ -32,7 +24,7 @@ namespace suzukaze
         _debug(const int line, const std::string &names, const T &arg, const U &...args) : names(names)
         {
             sout << ".." << line << "..\t";
-            if constexpr (std::is_arithmetic_v<T> || std::__is_pair<T> || is_string<T> || (... || !std::is_arithmetic_v<U>))
+            if constexpr (!iterable<T>)
                 _print(arg, false), (..., _print(args, true));
             else
                 _print(arg, false, args...);
@@ -66,11 +58,11 @@ namespace suzukaze
             int idx = 0;
             if constexpr (std::is_arithmetic_v<T>)
                 sout << arg;
-            else if constexpr (is_string<T>)
+            else if constexpr (string<T>)
                 sout << '"' << arg << '"';
             else if constexpr (std::__is_pair<T>)
                 sout << '(', __print(arg.first, size, args...), sout << sep, __print(arg.second, size, args...), sout << ')';
-            else if constexpr (is_iterable<T>)
+            else if constexpr (iterable<T>)
             {
                 sout << '[';
                 for (auto it = std::begin(arg); idx < size && it != std::end(arg); it++, idx++)
