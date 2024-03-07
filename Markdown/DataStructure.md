@@ -1,20 +1,26 @@
-- [LCA](#lca)
-- [树状数组](#树状数组)
-- [线段树](#线段树)
-- [Splay](#splay)
-  - [启发式合并](#启发式合并)
-- [莫队](#莫队)
-- [树链剖分](#树链剖分)
-- [LCT](#lct)
-  - [将边权转化为点权](#将边权转化为点权)
-- [DLX](#dlx)
-- [左偏树](#左偏树)
-- [点分治](#点分治)
-- [点分树](#点分树)
+- [数据结构](#数据结构)
+  - [LCA](#lca)
+  - [树状数组](#树状数组)
+  - [线段树](#线段树)
+  - [主席树](#主席树)
+  - [Splay](#splay)
+    - [启发式合并](#启发式合并)
+  - [莫队](#莫队)
+  - [树链剖分](#树链剖分)
+  - [LCT](#lct)
+    - [将边权转化为点权](#将边权转化为点权)
+  - [DLX](#dlx)
+  - [左偏树](#左偏树)
+  - [点分治](#点分治)
+  - [点分树](#点分树)
+  - [CDQ 分治](#cdq-分治)
   - [Dsu on tree](#dsu-on-tree)
   - [用两个优先队列实现可删除堆](#用两个优先队列实现可删除堆)
 
+# 数据结构
+
 ## LCA
+
 ```cpp
 struct LCA
 {
@@ -34,82 +40,60 @@ struct LCA
 ```
 
 ## 树状数组
+
 ```cpp
-struct BIT
-{
-    int tr[N], sum;
+struct BIT {
+    int tr[N];
 
-    int lowbit(int x)
-    {
-        return x & -x;
-    }
-
-    void add(int k, int x)
-    {
-        sum += x;
-        for (int i = k; i < N; i += lowbit(i))
+    void add(int k, int x) {
+        for (int i = k; i < N; i += i & -i)
             tr[i] += x;
     }
 
-    int query(int k)
-    {
+    int query(int k) {
         int res = 0;
-        for (int i = k; i; i -= lowbit(i))
+        for (int i = k; i; i -= i & -i)
             res += tr[i];
         return res;
     }
 
-    int query_rev(int k)
-    {
-        return sum - query(k - 1);
-    }
+    int query_rev(int k) { return query(N - 1) - query(k - 1); }
+
+    int query_seg(int l, int r) { return query(r) - query(l - 1); }
 };
 ```
 
 ## 线段树
-```cpp
-struct SegTree
-{
-    struct Val { };
-    struct Lazy { };
 
-    struct Node
-    {
+```cpp
+// 简单
+struct SegTree {
+    struct Node {
         int l, r;
-        Val val;
-        Lazy lazy;
+        int val, lazy;
     }tr[N << 2];
 
-    // 区间合并
-    Val merge(Val x, Val y)
-    {
+    void add(int u, int x) {
     }
 
-    // 加懒标记
-    void add(int u, Lazy lazy)
-    {
-    }
-
-    void push_up(int u)
-    {
+    void push_up(int u) {
         auto &p = tr[u], &l = tr[u << 1], &r = tr[u << 1 | 1];
-        p.val = merge(l.val, r.val);
     }
 
-    void push_down(int u)
-    {
+    void push_down(int u) {
         auto &p = tr[u];
         add(u << 1, p.lazy);
         add(u << 1 | 1, p.lazy);
-        p.lazy = {};
+        p.lazy = 0;
     }
 
-    void build(int u, int l, int r)
-    {
+    void build(int u, int l, int r) {
         tr[u] = { l, r };
 
-        if (l == r)
+        if (l == r) {
+
             return;
+        }
 
         int mid = l + r >> 1;
         build(u << 1, l, mid);
@@ -118,11 +102,9 @@ struct SegTree
         push_up(u);
     }
 
-    void modify(int u, int l, int r, int x)
-    {
-        if (l <= tr[u].l && tr[u].r <= r)
-        {
-            add(u, { });
+    void modify(int u, int l, int r, int x) {
+        if (l <= tr[u].l && tr[u].r <= r) {
+            add(u, x);
             return;
         }
 
@@ -137,8 +119,86 @@ struct SegTree
         push_up(u);
     }
 
-    Val query(int u, int l, int r)
-    {
+    int query(int u, int l, int r) {
+        if (l <= tr[u].l && tr[u].r <= r)
+            return tr[u].val;
+
+        push_down(u);
+
+        int mid = tr[u].l + tr[u].r >> 1;
+        int res = 0;
+        if (l <= mid)
+            res += query(u << 1, l, r);
+        if (mid < r)
+            res += query(u << 1 | 1, l, r);
+
+        return res;
+    }
+};
+
+// 通用
+struct SegTree {
+    struct Val { };
+    struct Lazy { };
+
+    struct Node {
+        int l, r;
+        Val val;
+        Lazy lazy;
+    }tr[N << 2];
+
+    // 区间合并
+    Val merge(const Val &x, const Val &y) {
+    }
+
+    // 加懒标记
+    void add(int u, const Lazy &x) {
+    }
+
+    void push_up(int u) {
+        auto &p = tr[u], &l = tr[u << 1], &r = tr[u << 1 | 1];
+        p.val = merge(l.val, r.val);
+    }
+
+    void push_down(int u) {
+        auto &p = tr[u];
+        add(u << 1, p.lazy);
+        add(u << 1 | 1, p.lazy);
+        p.lazy = {};
+    }
+
+    void build(int u, int l, int r) {
+        tr[u] = { l, r };
+
+        if (l == r) {
+            return;
+        }
+
+        int mid = l + r >> 1;
+        build(u << 1, l, mid);
+        build(u << 1 | 1, mid + 1, r);
+
+        push_up(u);
+    }
+
+    void modify(int u, int l, int r, const Lazy &x) {
+        if (l <= tr[u].l && tr[u].r <= r) {
+            add(u, x);
+            return;
+        }
+
+        push_down(u);
+
+        int mid = tr[u].l + tr[u].r >> 1;
+        if (l <= mid)
+            modify(u << 1, l, r, x);
+        if (mid < r)
+            modify(u << 1 | 1, l, r, x);
+
+        push_up(u);
+    }
+
+    Val query(int u, int l, int r) {
         if (l <= tr[u].l && tr[u].r <= r)
             return tr[u].val;
 
@@ -152,6 +212,62 @@ struct SegTree
             res = merge(res, query(u << 1 | 1, l, r));
 
         return res;
+    }
+};
+```
+
+## 主席树
+```cpp
+struct SegTree {
+    struct Node {
+        int lc, rc;
+        int sum;
+    } tr[N * 24];
+    int idx;
+    int root[N];
+
+    void push_up(int u) {
+        tr[u].sum = tr[tr[u].lc].sum + tr[tr[u].rc].sum;
+    }
+
+    void build(int u, int l, int r) {
+        if (l == r)
+            return;
+
+        int mid = l + r >> 1;
+        tr[u].lc = ++idx, tr[u].rc = ++idx;
+        build(tr[u].lc, l, mid), build(tr[u].rc, mid + 1, r);
+    }
+
+    void insert(int u, int v, int l, int r, int k) {
+        if (l == r) {
+            tr[u].sum = tr[v].sum + 1;
+            return;
+        }
+
+        int mid = l + r >> 1;
+        if (k <= mid) {
+            tr[u].lc = ++idx;
+            tr[u].rc = tr[v].rc;
+            insert(tr[u].lc, tr[v].lc, l, mid, k);
+        } else {
+            tr[u].rc = ++idx;
+            tr[u].lc = tr[v].lc;
+            insert(tr[u].rc, tr[v].rc, mid + 1, r, k);
+        }
+
+        push_up(u);
+    }
+
+    int query(int u, int v, int l, int r, int x) {
+        if (l == r)
+            return l;
+
+        int mid = l + r >> 1, t = mid - l + 1 - (tr[tr[u].lc].sum - tr[tr[v].lc].sum);
+        if (x <= t)
+            return query(tr[u].lc, tr[v].lc, l, mid, x);
+        else
+            return query(tr[u].rc, tr[v].rc, mid + 1, r, x - t);
     }
 };
 ```
@@ -407,19 +523,17 @@ namespace
 ```
 
 ## 树链剖分
+
 ```cpp
 // 树链剖分部分
-struct QTree
-{
+struct QTree {
     vector<int> h[N];
     int dfn[N], first[N], last[N], idx;
     int size[N], depth[N], fa[N], top[N], son[N];
 
-    void dfs1(int u, int p)
-    {
+    void dfs1(int u, int p) {
         size[u] = 1, depth[u] = depth[p] + 1, fa[u] = p;
-        for (auto sn : h[u])
-        {
+        for (auto sn : h[u]) {
             if (sn == p)
                 continue;
 
@@ -431,15 +545,12 @@ struct QTree
         }
     }
 
-    void dfs2(int u, int t)
-    {
+    void dfs2(int u, int t) {
         top[u] = t, dfn[++idx] = u, first[u] = idx;
 
-        if (son[u])
-        {
+        if (son[u]) {
             dfs2(son[u], t);
-            for (auto sn : h[u])
-            {
+            for (auto sn : h[u]) {
                 if (sn == fa[u] || sn == son[u])
                     continue;
 
@@ -450,8 +561,14 @@ struct QTree
         last[u] = idx;
     }
 
-    void op()
-    {
+    void init() {
+        fill(son + 1, son + 1 + idx, 0);
+        for (int i = 1; i <= idx; i++)
+            h[i].clear();
+        idx = 0;
+    }
+
+    void op() {
         dfs1(1, 0);
         dfs2(1, 1);
     }
@@ -626,16 +743,18 @@ struct LCT
     }
 };
 ```
+
 ### 将边权转化为点权
+
 - 将边的两个顶点连接一个新的点，并且该点权值为原来边的值
 
 ## DLX
+
 - 精确覆盖
+
 ```cpp
-struct DLX
-{
-    struct Node
-    {
+struct DLX {
+    struct Node {
         int d, u, l, r;
         int row, col;
         int cnt;
@@ -643,16 +762,14 @@ struct DLX
     int idx;
     int res[N], top;
 
-    void init()
-    {
+    void init() {
         for (int i = 0; i <= m; i++)
             nd[i].l = i - 1, nd[i].r = i + 1, nd[i].u = nd[i].d = i;
         nd[0].l = m, nd[m].r = 0;
         idx = m + 1;
     }
 
-    void add(int &hh, int &tt, int x, int y)
-    {
+    void add(int &hh, int &tt, int x, int y) {
         auto &ndi = nd[idx], &ndy = nd[y];
 
         ndi.row = x, ndi.col = y, ndy.cnt++;
@@ -661,30 +778,25 @@ struct DLX
         hh = idx++;
     }
 
-    void remove(int p)
-    {
+    void remove(int p) {
         nd[nd[p].r].l = nd[p].l, nd[nd[p].l].r = nd[p].r;
         for (int i = nd[p].d; i != p; i = nd[i].d)
-            for (int j = nd[i].r; j != i; j = nd[j].r)
-            {
+            for (int j = nd[i].r; j != i; j = nd[j].r) {
                 nd[nd[j].u].d = nd[j].d, nd[nd[j].d].u = nd[j].u;
                 nd[nd[j].col].cnt--;
             }
     }
 
-    void resume(int p)
-    {
+    void resume(int p) {
         for (int i = nd[p].u; i != p; i = nd[i].u)
-            for (int j = nd[i].l; j != i; j = nd[j].l)
-            {
+            for (int j = nd[i].l; j != i; j = nd[j].l) {
                 nd[nd[j].col].cnt++;
                 nd[nd[j].u].d = nd[nd[j].d].u = j;
             }
         nd[nd[p].l].r = nd[nd[p].r].l = p;
     }
 
-    bool dfs()
-    {
+    bool dfs() {
         if (!nd[0].r)
             return true;
 
@@ -694,8 +806,7 @@ struct DLX
                 p = i;
 
         remove(p);
-        for (int i = nd[p].d; i != p; i = nd[i].d)
-        {
+        for (int i = nd[p].d; i != p; i = nd[i].d) {
             res[++top] = nd[i].row;
             for (int j = nd[i].r; j != i; j = nd[j].r)
                 remove(nd[j].col);
@@ -713,12 +824,12 @@ struct DLX
     }
 };
 ```
+
 - 重复覆盖
+
 ```cpp
-struct DLX
-{
-    struct Node
-    {
+struct DLX {
+    struct Node {
         int u, d, l, r;
         int row, col;
         int cnt;
@@ -727,16 +838,14 @@ struct DLX
     int res[N];
     bool book[N];
 
-    void init()
-    {
+    void init() {
         for (int i = 0; i <= m; i++)
             nd[i].l = i - 1, nd[i].r = i + 1, nd[i].u = nd[i].d = i;
         nd[0].l = m, nd[m].r = 0;
         idx = m + 1;
     }
 
-    void add(int &hh, int &tt, int x, int y)
-    {
+    void add(int &hh, int &tt, int x, int y) {
         auto &ndi = nd[idx], &ndy = nd[y];
 
         ndi.row = x, ndi.col = y, ndy.cnt++;
@@ -745,25 +854,21 @@ struct DLX
         hh = idx++;
     }
 
-    void remove(int p)
-    {
+    void remove(int p) {
         for (int i = nd[p].d; i != p; i = nd[i].d)
             nd[nd[i].r].l = nd[i].l, nd[nd[i].l].r = nd[i].r;
     }
 
-    void resume(int p)
-    {
+    void resume(int p) {
         for (int i = nd[p].u; i != p; i = nd[i].u)
             nd[nd[i].r].l = nd[nd[i].l].r = i;
     }
 
-    int val()
-    {
+    int val() {
         memset(book, 0, sizeof book);
         int cnt = 0;
         for (int i = nd[0].r; i; i = nd[i].r)
-            if (!book[i])
-            {
+            if (!book[i]) {
                 book[i] = true;
                 for (int j = nd[i].d; j != i; j = nd[j].d)
                     for (int k = nd[j].r; k != j; k = nd[k].r)
@@ -774,8 +879,7 @@ struct DLX
         return cnt;
     }
 
-    bool dfs(int depth)
-    {
+    bool dfs(int depth) {
         if (depth + val() > max_depth)
             return false;
 
@@ -787,8 +891,7 @@ struct DLX
             if (nd[i].cnt < nd[p].cnt)
                 p = i;
 
-        for (int i = nd[p].d; i != p; i = nd[i].d)
-        {
+        for (int i = nd[p].d; i != p; i = nd[i].d) {
             res[depth + 1] = nd[i].row;
             remove(i);
             for (int j = nd[i].r; j != i; j = nd[j].r)
@@ -808,6 +911,7 @@ struct DLX
 ```
 
 ## 左偏树
+
 ```cpp
 struct LeftTree
 {
@@ -845,7 +949,9 @@ struct LeftTree
 ```
 
 ## 点分治
+
 - 性质：重心的所有子树的点数$\leq n/2$
+
 ```cpp
 bool book[N];
 
@@ -958,6 +1064,7 @@ int calc(int u)
 ```
 
 ## 点分树
+
 ```cpp
 namespace
 {
@@ -1074,42 +1181,91 @@ namespace
 };
 ```
 
-### Dsu on tree
+## CDQ 分治
+
+- 需要添加 BIT
+
+```cpp
+struct CDQ {
+    // bit
+    struct Node {
+        int a, b, c, res, cnt;
+
+        bool operator<(const Node &y) const {
+            if (a != y.a)
+                return a < y.a;
+            if (b != y.b)
+                return b < y.b;
+            return c < y.c;
+        }
+
+        bool operator==(const Node &y) const { return a == y.a && b == y.b && c == y.c; }
+    }nd[N];
+    int idx;
+
+    void cdq(int l, int r) {
+        if (l == r)
+            return;
+
+        int mid = l + r >> 1;
+        cdq(l, mid), cdq(mid + 1, r);
+
+        int i, j;
+        for (i = l, j = mid + 1; j <= r; j++) {
+            for (; i <= mid && nd[i].b <= nd[j].b; i++)
+                bit.add(nd[i].c, nd[i].cnt);
+            nd[j].res += bit.query(nd[j].c);
+        }
+
+        for (int k = l; k < i; k++)
+            bit.add(nd[k].c, -nd[k].cnt);
+
+        inplace_merge(nd + l, nd + mid + 1, nd + r + 1, [](const Node &x, const Node &y) {
+            return x.b < y.b;
+            });
+    }
+
+    void op() {
+        sort(nd + 1, nd + 1 + n);
+
+        for (int i = 1; i <= n; i++)
+            if (nd[i - 1] == nd[i])
+                nd[idx].cnt++;
+            else
+                nd[++idx] = nd[i], nd[idx].cnt = 1;
+
+        cdq(1, idx);
+    }
+};
+```
+
+## Dsu on tree
 ```cpp
 bool book[N];
-int res[N];
-void dfs(int u, bool del)
-{
-    if (del)
-    {
+void dfs(int u, bool del) {
+    if (del) {
         book[u] = false;
-        bit.add(a[u], -1);
-    }
-    else
-    {
+        // 删除
+    } else {
         book[u] = true;
-        bit.add(a[u], 1);
+        // 添加
     }
- 
-    for (auto sn : qt.h[u])
-    {
+
+    for (auto sn : qt.h[u]) {
         if (sn == qt.fa[u])
             continue;
- 
+
         if (del == book[sn])
             dfs(sn, del);
     }
 }
 
-void solve()
-{
-    for (int i = n; i; i--)
-    {
+void solve() {
+    for (int i = n; i; i--) {
         int u = qt.dfn[i];
         dfs(u, false);
 
-        for (auto t : q[u])
-            res[t.idx] = bit.query(t.k);
+        // 查询
 
         if (qt.top[u] == u)
             dfs(u, true);
@@ -1117,28 +1273,20 @@ void solve()
 }
 ```
 
-### 用两个优先队列实现可删除堆
+## 用两个优先队列实现可删除堆
 ```cpp
-struct Heap
-{
+struct Heap {
     priority_queue<int> heap, del;
- 
-    int top()
-    {
+
+    int top() {
         while (heap.size() && del.size() && heap.top() == del.top())
             heap.pop(), del.pop();
- 
+
         return heap.size() ? heap.top() : 0;
     }
- 
-    void add(int x)
-    {
-        heap.push(x);
-    }
- 
-    void remove(int x)
-    {
-        del.push(x);
-    }
+
+    void add(int x) { heap.push(x); }
+
+    void remove(int x) { del.push(x); }
 };
 ```

@@ -1,4 +1,4 @@
-- [String](#string)
+- [字符串](#字符串)
   - [KMP](#kmp)
   - [Trie树](#trie树)
   - [AC自动机](#ac自动机)
@@ -15,26 +15,37 @@
   - [后缀数组](#后缀数组)
   - [后缀自动机](#后缀自动机)
 
-# String
+# 字符串
 ## KMP
 ```cpp
-struct KMP
-{
+struct KMP {
     int size;
-    char s[N];
+    string s;
     int ne[N];
 
-    void op()
-    {
-        size = strlen(s + 1);
-        for (int i = 2, j = 0; i <= size; i++)
-        {
+    void init(const string &t) { s = " " + t, size = t.size(); }
+
+    void op() {
+        size = s.size() - 1;
+        for (int i = 2, j = 0; i <= size; i++) {
             while (j && s[i] != s[j + 1])
                 j = ne[j];
             if (s[i] == s[j + 1])
                 j++;
             ne[i] = j;
         }
+    }
+
+    bool in(const string t) {
+        for (int i = 0, j = 0; i < t.size(); i++) {
+            while (j && s[j + 1] != t[i])
+                j = ne[j];
+
+            if (s[j + 1] == t[i])
+                if (++j == size)
+                    return true;
+        }
+        return false;
     }
 };
 ```
@@ -82,18 +93,17 @@ struct Trie
 
 ## AC自动机
 ```cpp
-struct ACAM
-{
-    char s[M];
-    int tr[M][26], idx;
-    int ne[M], cnt[M], to[N], from[M];
-    vector<int> fail[M];
+struct ACAM {
+    static constexpr int M = 26;
+    char s[N];
+    int tr[N][M], idx;
+    int ne[N], cnt[N], to[N], from[N];
+    int q[N], hh, tt;
+    vector<int> fail[N];
 
-    void insert(int k)
-    {
+    void insert(int k) {
         int p = 0;
-        for (int i = 1; s[i]; i++)
-        {
+        for (int i = 1; s[i]; i++) {
             int u = s[i] - 'a';
 
             if (!tr[p][u])
@@ -106,35 +116,36 @@ struct ACAM
         from[p] = k;
     }
 
-    void build()
-    {
-        queue<int> q;
-        for (int i = 0; i < 26; i++)
-            if (tr[0][i])
-            {
-                q.push(tr[0][i]);
+    void build() {
+        for (int i = 0; i < M; i++)
+            if (tr[0][i]) {
+                q[tt++] = tr[0][i];
                 fail[0].push_back(tr[0][i]);
             }
 
-        while (q.size())
-        {
-            int t = q.front();
-            q.pop();
-
-            for (int c = 0; c < 26; c++)
-            {
+        while (hh != tt) {
+            int t = q[hh++];
+            for (int c = 0; c < M; c++) {
                 int &p = tr[t][c];
                 if (!p)
                     p = tr[ne[t]][c];
-                else
-                {
+                else {
                     ne[p] = tr[ne[t]][c];
 
-                    q.push(p);
+                    q[tt++] = p;
                     fail[ne[p]].push_back(p);
                 }
             }
         }
+    }
+
+    void init() {
+        for (int i = 0; i <= idx; i++) {
+            ne[i] = cnt[i] = from[i] = 0;
+            fill(tr[i], tr[i] + M, 0);
+            fail[i].clear();
+        }
+        idx = hh = tt = 0;
     }
 };
 ```
@@ -157,51 +168,33 @@ struct ACAM
 ## Manacher
 ### 前期处理
 - 将`S`中任意两个字符间与开头结尾插入`#`，因此所有回文串都变成奇数长度，且首尾 一定是`#`
-- 可以发现：$|S^\#|=2|S|+1$，以及$|S|=\frac{|S^\#|-1}{2}=\lfloor\frac{S^\#}{2}\rfloor$。此关系对回文半径依然适用
+- 可以发现： $|S^\#|=2|S|+1$ ，以及 $|S|=\frac{|S^\#|-1}{2}=\lfloor\frac{|S^\#|}{2}\rfloor$。对于回文半径 $|S|=\lfloor\frac{|S^\#|}{2}\rfloor$ 
 
 ### 用法
 - 求每个回文中心的回文半径
 - 求本质不同回文串：在`Manacher`中，新的回文串一定出现在使得**最右串右移**的时候，因此本质不同回文串至多$n$个，把所有更新最右回文串去重即得到本质不同回文串
 ```cpp
-struct Manacher
-{
+struct Manacher {
     int size;
-    char s[N], t[N];
-    int p, r, len[N];
+    char s[N << 1], t[N];
+    int p, r, len[N << 1];
 
-    void get(int k, int x)
-    {
-        for (; 1 <= k - x && k + x <= size; x++)
-            if (s[k - x] != s[k + x])
-                break;
+    void get(int k, int x) {
+        for (; 1 <= k - x && k + x <= size && s[k - x] == s[k + x]; x++);
 
         len[k] = x;
         if (k + x - 1 > r)
-        {
-            r = k + x - 1;
-            p = k;
-        }
+            r = k + x - 1, p = k;
     }
 
-    void op()
-    {
+    void op() {
+        size = p = r = 0;
         s[++size] = '#';
         for (int i = 1; t[i]; i++)
-        {
-            s[++size] = t[i];
-            s[++size] = '#';
-        }
+            s[++size] = t[i], s[++size] = '#';
 
         for (int i = 1; i <= size; i++)
-        {
-            if (i > r)
-                get(i, 0);
-            else
-            {
-                int sym = p * 2 - i;
-                get(i, min(len[sym], sym - p + len[p]));
-            }
-        }
+            get(i, min(len[p * 2 - i], r - i + 1));
     }
 };
 ```

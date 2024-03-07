@@ -1,22 +1,23 @@
 #include<fstream>
-#include<string>
+#include<algorithm>
 
-#define in_file "cpp_to_json\\in.txt"
-#define out_file "cpp_to_json\\out.txt"
-
-using namespace std;
-
-int main()
-{
-    ifstream fin(in_file);
-    ofstream fout(out_file);
+int main() {
+    std::ifstream fin("cpp_to_json\\in.txt");
+    std::ofstream fout("cpp_to_json\\out.txt");
 
     fout << "\"prefix\": \"#\",\n";
     fout << "\"body\": [\n";
 
-    string line;
-    while (getline(fin, line))
-        fout << '\"' << line << "\",\n";
+    std::string line;
+    while (std::getline(fin, line)) {
+        fout << '\"';
+        std::for_each(line.begin(), line.end(), [&](char c) {
+            if (c == '"')
+                fout << '\\';
+            fout << c;
+        });
+        fout << "\",\n";
+    }
 
     fout << "]";
 }

@@ -39,7 +39,6 @@ namespace suzukaze {
     check(has_top, decltype(std::declval<T>().top()));
     check(has_front, decltype(std::declval<T>().front()));
     check(can_cout, decltype(std::cout << std::declval<T>()));
-
 #undef check
 
     struct Any { template<typename T> operator T(); };
@@ -52,9 +51,11 @@ namespace suzukaze {
     template<typename T> constexpr auto size_(Tag<4>) -> decltype(T{ Any{}, Any{}, Any{}, Any{} }, 0) { return 4; }
     template<typename T> constexpr auto size_(Tag<5>) -> decltype(T{ Any{}, Any{}, Any{}, Any{}, Any{} }, 0) { return 5; }
     template<typename T> constexpr auto size_(Tag<6>) -> decltype(T{ Any{}, Any{}, Any{}, Any{}, Any{}, Any{} }, 0) { return 6; }
+    template<typename T> constexpr auto size_(Tag<7>) -> decltype(T{ Any{}, Any{}, Any{}, Any{}, Any{}, Any{}, Any{} }, 0) { return 7; }
+    template<typename T> constexpr auto size_(Tag<8>) -> decltype(T{ Any{}, Any{}, Any{}, Any{}, Any{}, Any{}, Any{}, Any{} }, 0) { return 8; }
     template<typename T> constexpr auto size() {
         if constexpr (std::is_aggregate_v<T>)
-            return size_<T>(Tag<6>{});
+            return size_<T>(Tag<8>{});
         else
             return std::tuple_size_v<T>;
     }
@@ -74,10 +75,10 @@ namespace suzukaze {
                 print(arg, false, args...);
             else
                 print(arg, false), (..., print(args, true));
-            std::clog << sout.str() << "\n";
+            std::cerr << sout.str() << "\n";
         }
 
-        Debug(const int line, const std::string &names) { std::clog << "-------------------------------\n"; }
+        Debug(const int line, const std::string &names) { std::cerr << "-------------------------------\n"; }
 
     private:
         void print_in_sep(bool flag = true) { if (flag) sout << in_sep; }
@@ -135,7 +136,7 @@ namespace suzukaze {
             } else if constexpr (can_cout<T>)
                 sout << arg;
             else if constexpr (std::is_aggregate_v<T> || is_tuple<T>) {
-                if constexpr (size<T>() <= 6) {
+                if constexpr (size<T>() <= 8) {
                     sout << "{("[is_tuple<T>];
                     constexpr auto cnt = size<T>();
                     if constexpr (cnt == 1) {
@@ -153,9 +154,15 @@ namespace suzukaze {
                     } else if constexpr (cnt == 5) {
                         const auto &[m1, m2, m3, m4, m5] = arg;
                         print_(m1), print_in_sep(), print_(m2), print_in_sep(), print_(m3), print_in_sep(), print_(m4), print_in_sep(), print_(m5);
-                    } else {
+                    } else if constexpr (cnt == 6) {
                         const auto &[m1, m2, m3, m4, m5, m6] = arg;
                         print_(m1), print_in_sep(), print_(m2), print_in_sep(), print_(m3), print_in_sep(), print_(m4), print_in_sep(), print_(m5), print_in_sep(), print_(m6);
+                    } else if constexpr (cnt == 7) {
+                        const auto &[m1, m2, m3, m4, m5, m6, m7] = arg;
+                        print_(m1), print_in_sep(), print_(m2), print_in_sep(), print_(m3), print_in_sep(), print_(m4), print_in_sep(), print_(m5), print_in_sep(), print_(m6), print_in_sep(), print_(m7);
+                    } else {
+                        const auto &[m1, m2, m3, m4, m5, m6, m7, m8] = arg;
+                        print_(m1), print_in_sep(), print_(m2), print_in_sep(), print_(m3), print_in_sep(), print_(m4), print_in_sep(), print_(m5), print_in_sep(), print_(m6), print_in_sep(), print_(m7), print_in_sep(), print_(m8);
                     }
                     sout << "})"[is_tuple<T>];
                 }
