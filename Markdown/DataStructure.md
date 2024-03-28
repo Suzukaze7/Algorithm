@@ -131,51 +131,43 @@ struct ST {
 ```
 
 ## Splay
-- `splay`和线段树最大的不同就是根节点也有一个数
-```cpp
-struct Splay
-{
-    struct Node
-    {
-        int s[2], p;
-        int v, size;
-        int lazy;
 
-        void init(int _p, int _v)
-        {
-            p = _p;
-            v = _v;
-            size = 1;
-        }
+- `splay` 和线段树最大的不同就是根节点也有一个数
+- 空树插入时可以直接插入
+
+```cpp
+struct Splay {
+    struct Node {
+        int s[2], p, sz;
+        int v, lazy;
     }tr[N << 1];
     int root, idx;
 
-    void add_rev(int u)
-    {
+    void init(int u, int _p, int _v) {
+        auto &p = tr[u];
+        p.p = _p, p.v = _v, p.sz = 1;
+    }
+
+    void add(int u) {
         if (!u)
             return;
         swap(tr[u].s[0], tr[u].s[1]);
         tr[u].lazy ^= 1;
     }
 
-    void push_up(int u)
-    {
-        tr[u].size = tr[tr[u].s[0]].size + tr[tr[u].s[1]].size + 1;
+    void push_up(int u) {
+        tr[u].sz = tr[tr[u].s[0]].sz + tr[tr[u].s[1]].sz + 1;
     }
 
-    void push_down(int u)
-    {
-        if (tr[u].lazy)
-        {
-            add_rev(tr[u].s[0]);
-            add_rev(tr[u].s[1]);
+    void push_down(int u) {
+        if (tr[u].lazy) {
+            add(tr[u].s[0]);
+            add(tr[u].s[1]);
             tr[u].lazy ^= 1;
         }
-        // 如果是求和一类的需要判断子节点是否为0
     }
 
-    void rotate(int x)
-    {
+    void rotate(int x) {
         int y = tr[x].p, z = tr[y].p;
         int k = (tr[y].s[1] == x);
 
@@ -186,10 +178,8 @@ struct Splay
         push_up(y), push_up(x);
     }
 
-    void splay(int x, int k)
-    {
-        while (tr[x].p != k)
-        {
+    void splay(int x, int k) {
+        while (tr[x].p != k) {
             int y = tr[x].p, z = tr[y].p;
             if (z != k)
                 if ((tr[y].s[1] == x) ^ (tr[z].s[1] == y))
@@ -203,78 +193,69 @@ struct Splay
             root = x;
     }
 
-    // 以下所有操作都要加上push_down
-    int get(int k)
-    {
+    int get(int k) {
         int u = root;
-        while (u)
-        {
-            if (tr[tr[u].s[0]].size >= k)
+        while (u) {
+            push_down(u);
+            if (tr[tr[u].s[0]].sz >= k)
                 u = tr[u].s[0];
-            else if (tr[tr[u].s[0]].size + 1 == k)
+            else if (tr[tr[u].s[0]].sz + 1 == k)
                 break;
             else
-            {
-                k -= tr[tr[u].s[0]].size + 1;
-                u = tr[u].s[1];
-            }
+                k -= tr[tr[u].s[0]].sz + 1, u = tr[u].s[1];
         }
 
         return u ? u : -1;
     }
 
-    int get_k(int x)  // 需要保证x存在
-    {
+    int get_rk(int x) {
         int u = root, cnt = 0;
-        while (true)
-        {
+        while (true) {
+            push_down(u);
             if (tr[u].v < x)
-            {
-                cnt += tr[tr[u].s[0]].size + 1;
-                u = tr[u].s[1];
-            }
+                cnt += tr[tr[u].s[0]].sz + 1, u = tr[u].s[1];
             else if (tr[u].v == x)
-                return cnt + tr[tr[u].s[0]].size + 1;
+                return cnt + tr[tr[u].s[0]].sz + 1;
             else
                 u = tr[u].s[0];
         }
     }
 
-    void insert1(int x)  // 按值大小插入
-    {
+    void insert1(int x) { // 按值大小插入
         int p = 0, u = root;
-        while (u)
+        while (u) {
+            push_down(u);
             p = u, u = tr[u].s[tr[u].v < x];
+        }
 
         tr[p].s[tr[p].v < x] = u = ++idx;
-        tr[u].init(p, x);
+        init(u, p, x);
         splay(u, 0);
     }
 
-    void insert2(int x)  // 插入到最后
-    {
+    void insert2(int x) { // 插入到最后
         int p = 0, u = root;
-        while (u)
+        while (u) {
+            push_down(u);
             p = u, u = tr[u].s[1];
+        }
 
         tr[p].s[1] = u = ++idx;
-        tr[u].init(p, x);
+        init(u, p, x);
         splay(u, 0);
     }
 
-    void insert3(int k, int x)  // 插入到第k个数后
-    {                           // 一般需要有哨兵
-        int l = get(k + 1), r = get(k + 2);
+    void insert3(int k, int x) { // 插入到第k个数后，需要有哨兵
+        int l = get(k), r = get(k + 1);
         splay(l, 0), splay(r, l);
 
         tr[r].s[0] = k = ++idx;
-        tr[k].init(r, x);
+        init(k, r, x);
         push_up(r), push_up(l);
     }
 
-    void erase(int x)
-    {
-        int k = get_k(x);
+    void erase(int x) {
+        int k = get_rk(x);
         int l = get(k - 1), r = get(k + 1);
 
         splay(l, 0), splay(r, l);
@@ -282,10 +263,11 @@ struct Splay
         push_up(r), push_up(l);
     }
 
-    int get_pre(int u, int x)
-    {
+    int get_pre(int u, int x) {
         if (!u)
             return -INF;
+
+        push_down(u);
 
         if (tr[u].v > x)
             return get_pre(tr[u].s[0], x);
@@ -293,10 +275,11 @@ struct Splay
             return max(tr[u].v, get_pre(tr[u].s[1], x));
     }
 
-    int get_aft(int u, int x)
-    {
+    int get_aft(int u, int x) {
         if (!u)
             return INF;
+
+        push_down(u);
 
         if (tr[u].v < x)
             return get_aft(tr[u].s[1], x);
@@ -304,10 +287,11 @@ struct Splay
             return min(tr[u].v, get_aft(tr[u].s[0], x));
     }
 
-    void print(int u)
-    {
+    void print(int u) {
         if (!u)
             return;
+
+        push_down(u);
 
         print(tr[u].s[0]);
         cout << tr[u].v << " ";
@@ -315,7 +299,9 @@ struct Splay
     }
 };
 ```
+
 ### 启发式合并
+
 - 每次合并两个集合时，将**较小的**集合合并到**较大的**集合，时间复杂度为$O(n\log n)$
 
 ## 莫队
@@ -471,46 +457,39 @@ Val query_path(int u, int v)
 ```
 
 ## LCT
+
 ```cpp
-struct LCT
-{
-    struct Node
-    {
+struct LCT {
+    struct Node {
         int s[2], v, p;
         int sum, lazy_rev;
     }tr[N];
 
-    void push_up(int u)
-    {
+    void push_up(int u) {
         auto &p = tr[u], &l = tr[p.s[0]], &r = tr[p.s[1]];
         p.sum = p.v ^ l.sum ^ r.sum;
     }
 
-    void push_down(int u)
-    {       // 如果是求和一类的需要判断子节点是否为0
+    void push_down(int u) { // 如果是求和一类的需要判断子节点是否为0
         auto &p = tr[u];
-        if (p.lazy_rev)
-        {
+        if (p.lazy_rev) {
             add_rev(p.s[0]);
             add_rev(p.s[1]);
             p.lazy_rev = 0;
         }
     }
 
-    void add_rev(int u)
-    {
+    void add_rev(int u) {
         swap(tr[u].s[0], tr[u].s[1]);
         tr[u].lazy_rev ^= 1;
     }
 
-    bool is_root(int u)
-    {
+    bool is_root(int u) {
         int t = tr[u].p;
         return tr[t].s[0] != u && tr[t].s[1] != u;
     }
 
-    void rotate(int x)
-    {
+    void rotate(int x) {
         int y = tr[x].p, z = tr[y].p;
         int k = tr[y].s[1] == x;
 
@@ -523,11 +502,9 @@ struct LCT
         push_up(y), push_up(x);
     }
 
-    void splay(int x)
-    {
+    void splay(int x) {
         int u = x;
-        while (!is_root(u))
-        {
+        while (!is_root(u)) {
             stk[top++] = u;
             u = tr[u].p;
         }
@@ -535,8 +512,7 @@ struct LCT
         while (top)
             push_down(stk[--top]);
 
-        while (!is_root(x))
-        {
+        while (!is_root(x)) {
             int y = tr[x].p, z = tr[y].p;
             if (!is_root(y))
                 if ((tr[y].s[1] == x) ^ (tr[z].s[1] == y))
@@ -547,11 +523,9 @@ struct LCT
         }
     }
 
-    void access(int y)
-    {
+    void access(int y) {
         int t = y;
-        for (int x = 0; y; x = y, y = tr[y].p)
-        {
+        for (int x = 0; y; x = y, y = tr[y].p) {
             splay(y);
             tr[y].s[1] = x;
             push_up(y);
@@ -560,14 +534,12 @@ struct LCT
         splay(t);
     }
 
-    void make_root(int u)
-    {
+    void make_root(int u) {
         access(u);
         add_rev(u);
     }
 
-    int find_root(int u)
-    {
+    int find_root(int u) {
         access(u);
         while (tr[u].s[0])
             u = tr[u].s[0];
@@ -576,24 +548,20 @@ struct LCT
         return u;
     }
 
-    void split(int x, int y)
-    {
+    void split(int x, int y) {
         make_root(x);
         access(y);
     }
 
-    void link(int x, int y)
-    {
+    void link(int x, int y) {
         make_root(x);
         if (find_root(y) != x)
             tr[x].p = y;
     }
 
-    void cut(int x, int y)
-    {
+    void cut(int x, int y) {
         make_root(x);
-        if (find_root(y) == x && tr[x].s[1] == y && !tr[y].s[0])
-        {
+        if (find_root(y) == x && tr[x].s[1] == y && !tr[y].s[0]) {
             tr[x].s[1] = 0, tr[y].p = 0;
             push_up(x);
         }
