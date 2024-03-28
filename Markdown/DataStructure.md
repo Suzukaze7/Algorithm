@@ -1,8 +1,9 @@
 - [数据结构](#数据结构)
   - [LCA](#lca)
   - [树状数组](#树状数组)
-  - [线段树](#线段树)
-  - [主席树](#主席树)
+    - [普通](#普通)
+    - [区间加](#区间加)
+  - [ST表](#st表)
   - [Splay](#splay)
     - [启发式合并](#启发式合并)
   - [莫队](#莫队)
@@ -13,7 +14,7 @@
   - [左偏树](#左偏树)
   - [点分治](#点分治)
   - [点分树](#点分树)
-  - [CDQ 分治](#cdq-分治)
+  - [CDQ分治](#cdq分治)
   - [Dsu on tree](#dsu-on-tree)
   - [用两个优先队列实现可删除堆](#用两个优先队列实现可删除堆)
 
@@ -22,24 +23,24 @@
 ## LCA
 
 ```cpp
-struct LCA
-{
+struct LCA {
+    vector<int> h[N];
     int fa[N][19];
 
-    void dfs(int u)
-    {
-        for (auto son : sam.link[u])
-        {
-            fa[son][0] = u;
+    void dfs(int u) {
+        for (auto sn : h[u]) {
+            fa[sn][0] = u;
             for (int i = 1; i < 19; i++)
-                fa[son][i] = fa[fa[son][i - 1]][i - 1];
-            dfs(son);
+                fa[sn][i] = fa[fa[sn][i - 1]][i - 1];
+            dfs(sn);
         }
     }
 };
 ```
 
 ## 树状数组
+
+### 普通
 
 ```cpp
 struct BIT {
@@ -63,211 +64,68 @@ struct BIT {
 };
 ```
 
-## 线段树
+### 区间加
 
 ```cpp
-// 简单
-struct SegTree {
-    struct Node {
-        int l, r;
-        int val, lazy;
-    }tr[N << 2];
+struct SegBIT {
+    struct BIT {
+        vector<int> tr;
 
-    void add(int u, int x) {
-    }
+        void init(int n) { tr.assign(n + 10, 0); }
 
-    void push_up(int u) {
-        auto &p = tr[u], &l = tr[u << 1], &r = tr[u << 1 | 1];
-    }
-
-    void push_down(int u) {
-        auto &p = tr[u];
-        add(u << 1, p.lazy);
-        add(u << 1 | 1, p.lazy);
-        p.lazy = 0;
-    }
-
-    void build(int u, int l, int r) {
-        tr[u] = { l, r };
-
-        if (l == r) {
-
-            return;
+        void add(int k, int x) {
+            for (int i = k; i < tr.size(); i += i & -i)
+                tr[i] += x;
         }
 
-        int mid = l + r >> 1;
-        build(u << 1, l, mid);
-        build(u << 1 | 1, mid + 1, r);
-
-        push_up(u);
-    }
-
-    void modify(int u, int l, int r, int x) {
-        if (l <= tr[u].l && tr[u].r <= r) {
-            add(u, x);
-            return;
+        int query(int k) {
+            int res = 0;
+            for (int i = k; i; i -= i & -i)
+                res += tr[i];
+            return res;
         }
+    }bit1, bit2;
 
-        push_down(u);
+    void init(int n) { bit1.init(n), bit2.init(n); }
 
-        int mid = tr[u].l + tr[u].r >> 1;
-        if (l <= mid)
-            modify(u << 1, l, r, x);
-        if (mid < r)
-            modify(u << 1 | 1, l, r, x);
-
-        push_up(u);
+    void add(int l, int r, int x) {
+        bit1.add(l, x), bit1.add(r + 1, -x);
+        bit2.add(l, x * l), bit2.add(r + 1, -x * (r + 1));
     }
 
-    int query(int u, int l, int r) {
-        if (l <= tr[u].l && tr[u].r <= r)
-            return tr[u].val;
-
-        push_down(u);
-
-        int mid = tr[u].l + tr[u].r >> 1;
-        int res = 0;
-        if (l <= mid)
-            res += query(u << 1, l, r);
-        if (mid < r)
-            res += query(u << 1 | 1, l, r);
-
-        return res;
-    }
-};
-
-// 通用
-struct SegTree {
-    struct Val { };
-    struct Lazy { };
-
-    struct Node {
-        int l, r;
-        Val val;
-        Lazy lazy;
-    }tr[N << 2];
-
-    // 区间合并
-    Val merge(const Val &x, const Val &y) {
-    }
-
-    // 加懒标记
-    void add(int u, const Lazy &x) {
-    }
-
-    void push_up(int u) {
-        auto &p = tr[u], &l = tr[u << 1], &r = tr[u << 1 | 1];
-        p.val = merge(l.val, r.val);
-    }
-
-    void push_down(int u) {
-        auto &p = tr[u];
-        add(u << 1, p.lazy);
-        add(u << 1 | 1, p.lazy);
-        p.lazy = {};
-    }
-
-    void build(int u, int l, int r) {
-        tr[u] = { l, r };
-
-        if (l == r) {
-            return;
-        }
-
-        int mid = l + r >> 1;
-        build(u << 1, l, mid);
-        build(u << 1 | 1, mid + 1, r);
-
-        push_up(u);
-    }
-
-    void modify(int u, int l, int r, const Lazy &x) {
-        if (l <= tr[u].l && tr[u].r <= r) {
-            add(u, x);
-            return;
-        }
-
-        push_down(u);
-
-        int mid = tr[u].l + tr[u].r >> 1;
-        if (l <= mid)
-            modify(u << 1, l, r, x);
-        if (mid < r)
-            modify(u << 1 | 1, l, r, x);
-
-        push_up(u);
-    }
-
-    Val query(int u, int l, int r) {
-        if (l <= tr[u].l && tr[u].r <= r)
-            return tr[u].val;
-
-        push_down(u);
-
-        int mid = tr[u].l + tr[u].r >> 1;
-        Val res = {};
-        if (l <= mid)
-            res = query(u << 1, l, r);
-        if (mid < r)
-            res = merge(res, query(u << 1 | 1, l, r));
-
-        return res;
+    int query(int l, int r) {
+        return bit1.query(r) * (r + 1) - bit2.query(r) -
+            (bit1.query(l - 1) * l - bit2.query(l - 1));
     }
 };
 ```
 
-## 主席树
+## ST表
+
 ```cpp
-struct SegTree {
-    struct Node {
-        int lc, rc;
-        int sum;
-    } tr[N * 24];
-    int idx;
-    int root[N];
+struct ST {
+    static constexpr int M = 25;
+    static inline int log2[N];
+    static inline int init = [] {
+        for (int i = 2; i < N; i++)
+            log2[i] = log2[i / 2] + 1;
+        return 0;
+    }();
 
-    void push_up(int u) {
-        tr[u].sum = tr[tr[u].lc].sum + tr[tr[u].rc].sum;
+    int f[N][M];
+
+    void op() {
+        for (int i = 1; i <= n; i++)
+            f[i][0] = a[i];
+
+        for (int j = 1; j < M; j++)
+            for (int i = 1; i + (1 << j) - 1 <= n; i++)
+                f[i][j] = max(f[i][j - 1], f[i + (1 << j - 1)][j - 1]);
     }
 
-    void build(int u, int l, int r) {
-        if (l == r)
-            return;
-
-        int mid = l + r >> 1;
-        tr[u].lc = ++idx, tr[u].rc = ++idx;
-        build(tr[u].lc, l, mid), build(tr[u].rc, mid + 1, r);
-    }
-
-    void insert(int u, int v, int l, int r, int k) {
-        if (l == r) {
-            tr[u].sum = tr[v].sum + 1;
-            return;
-        }
-
-        int mid = l + r >> 1;
-        if (k <= mid) {
-            tr[u].lc = ++idx;
-            tr[u].rc = tr[v].rc;
-            insert(tr[u].lc, tr[v].lc, l, mid, k);
-        } else {
-            tr[u].rc = ++idx;
-            tr[u].lc = tr[v].lc;
-            insert(tr[u].rc, tr[v].rc, mid + 1, r, k);
-        }
-
-        push_up(u);
-    }
-
-    int query(int u, int v, int l, int r, int x) {
-        if (l == r)
-            return l;
-
-        int mid = l + r >> 1, t = mid - l + 1 - (tr[tr[u].lc].sum - tr[tr[v].lc].sum);
-        if (x <= t)
-            return query(tr[u].lc, tr[v].lc, l, mid, x);
-        else
-            return query(tr[u].rc, tr[v].rc, mid + 1, r, x - t);
+    int query(int l, int r) {
+        int t = log2[r - l + 1];
+        return max(f[l][t], f[r - (1 << t) + 1][t]);
     }
 };
 ```
@@ -562,9 +420,8 @@ struct QTree {
     }
 
     void init() {
-        fill(son + 1, son + 1 + idx, 0);
         for (int i = 1; i <= idx; i++)
-            h[i].clear();
+            h[i].clear(), son[i] = 0;
         idx = 0;
     }
 
@@ -1181,7 +1038,7 @@ namespace
 };
 ```
 
-## CDQ 分治
+## CDQ分治
 
 - 需要添加 BIT
 

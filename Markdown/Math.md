@@ -1,0 +1,1 @@
+$gcd(a, b, c, \ldots, d) = gcd(a, b - a, c - b, \ldots, z - y)$
