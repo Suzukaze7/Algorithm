@@ -16,6 +16,7 @@
   - [点分树](#点分树)
   - [CDQ分治](#cdq分治)
   - [Dsu on tree](#dsu-on-tree)
+  - [笛卡尔树](#笛卡尔树)
   - [用两个优先队列实现可删除堆](#用两个优先队列实现可删除堆)
 
 # 数据结构
@@ -24,16 +25,39 @@
 
 ```cpp
 struct LCA {
+    static constexpr int M = 25;
     vector<int> h[N];
-    int fa[N][19];
+    int fa[N][M], depth[N];
 
-    void dfs(int u) {
+    void dfs(int u, int p) {
+        depth[u] = depth[p] + 1;
         for (auto sn : h[u]) {
+            if (sn == p)
+                continue;
+
             fa[sn][0] = u;
-            for (int i = 1; i < 19; i++)
+            for (int i = 1; i < M; i++)
                 fa[sn][i] = fa[fa[sn][i - 1]][i - 1];
-            dfs(sn);
+            dfs(sn, u);
         }
+    }
+
+    int lca(int u, int v) {
+        if (depth[u] < depth[v])
+            swap(u, v);
+
+        for (int i = M - 1; ~i; i--)
+            if (depth[fa[u][i]] >= depth[v])
+                u = fa[u][i];
+
+        if (u == v)
+            return u;
+
+        for (int i = M - 1; ~i; i--)
+            if (fa[u][i] != fa[v][i])
+                u = fa[u][i], v = fa[v][i];
+        
+        return fa[u][0];
     }
 };
 ```
@@ -44,56 +68,41 @@ struct LCA {
 
 ```cpp
 struct BIT {
-    int tr[N];
+    using T = ll;
+    T tr[N];
 
-    void add(int k, int x) {
+    void add(int k, T x) {
         for (int i = k; i < N; i += i & -i)
             tr[i] += x;
     }
 
-    int query(int k) {
-        int res = 0;
+    T query(int k) {
+        T res = 0;
         for (int i = k; i; i -= i & -i)
             res += tr[i];
         return res;
     }
 
-    int query_rev(int k) { return query(N - 1) - query(k - 1); }
+    T query_rev(int k) { return query(N - 1) - query(k - 1); }
 
-    int query_seg(int l, int r) { return query(r) - query(l - 1); }
+    T query_seg(int l, int r) { return query(r) - query(l - 1); }
 };
 ```
 
 ### 区间加
 
 ```cpp
+template<typename T = int>
 struct SegBIT {
-    struct BIT {
-        vector<int> tr;
+    // BIT
+    BIT bit1, bit2;
 
-        void init(int n) { tr.assign(n + 10, 0); }
-
-        void add(int k, int x) {
-            for (int i = k; i < tr.size(); i += i & -i)
-                tr[i] += x;
-        }
-
-        int query(int k) {
-            int res = 0;
-            for (int i = k; i; i -= i & -i)
-                res += tr[i];
-            return res;
-        }
-    }bit1, bit2;
-
-    void init(int n) { bit1.init(n), bit2.init(n); }
-
-    void add(int l, int r, int x) {
+    void add(int l, int r, T x) {
         bit1.add(l, x), bit1.add(r + 1, -x);
         bit2.add(l, x * l), bit2.add(r + 1, -x * (r + 1));
     }
 
-    int query(int l, int r) {
+    T query(int l, int r) {
         return bit1.query(r) * (r + 1) - bit2.query(r) -
             (bit1.query(l - 1) * l - bit2.query(l - 1));
     }
@@ -139,20 +148,18 @@ struct ST {
 struct Splay {
     struct Node {
         int s[2], p, sz;
-        int v, lazy;
-    }tr[N << 1];
+        int v;
+    }tr[N];
     int root, idx;
 
-    void init(int u, int _p, int _v) {
-        auto &p = tr[u];
-        p.p = _p, p.v = _v, p.sz = 1;
+    void init() {
+        root = idx = 0;
     }
 
-    void add(int u) {
-        if (!u)
-            return;
-        swap(tr[u].s[0], tr[u].s[1]);
-        tr[u].lazy ^= 1;
+    void init(int u, int _p, int _v) {
+        tr[u] = {};
+        auto &p = tr[u];
+        p.p = _p, p.v = _v, p.sz = 1;
     }
 
     void push_up(int u) {
@@ -160,11 +167,6 @@ struct Splay {
     }
 
     void push_down(int u) {
-        if (tr[u].lazy) {
-            add(tr[u].s[0]);
-            add(tr[u].s[1]);
-            tr[u].lazy ^= 1;
-        }
     }
 
     void rotate(int x) {
@@ -245,7 +247,7 @@ struct Splay {
         splay(u, 0);
     }
 
-    void insert3(int k, int x) { // 插入到第k个数后，需要有哨兵
+    void insert3(int k, int x) { // 插入到第k个数后，需要有首尾哨兵
         int l = get(k), r = get(k + 1);
         splay(l, 0), splay(r, l);
 
@@ -1096,6 +1098,34 @@ void solve() {
             dfs(u, true);
     }
 }
+```
+
+## 笛卡尔树
+
+```cpp
+struct CarTree {
+    struct Node {
+        int k, w, s[2];
+
+        bool operator<(const Node &oth) const { return k < oth.k; }
+    }tr[N];
+    int root, stk[N], top;
+
+    void build() {
+        sort(tr + 1, tr + 1 + n);
+        for (int i = 1; i <= n; i++) {
+            auto &cur = tr[i];
+            cur.s[0] = cur.s[1] = 0;
+            while (top && tr[stk[top - 1]].w > cur.w)
+                cur.s[0] = stk[--top];
+            if (top)
+                tr[stk[top - 1]].s[1] = i;
+            else
+                root = i;
+            stk[top++] = i;
+        }
+    }
+};
 ```
 
 ## 用两个优先队列实现可删除堆

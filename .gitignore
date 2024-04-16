@@ -6,4 +6,4 @@
 exe
 out
 !cpp_to_json.cpp
-!debug/
+!debug/*

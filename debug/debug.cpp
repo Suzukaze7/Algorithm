@@ -32,7 +32,7 @@ namespace suzukaze {
     template<typename T> constexpr bool is_iterable<T, std::void_t<decltype(std::begin(std::declval<T &>())), decltype(std::end(std::declval<T &>()))>> = true;
 
 #define check(name, ...) \
-    template<typename, typename = std::void_t<>> constexpr bool name = false; \
+    template<typename, typename = std::void_t<>> constexpr bool name = false;\
     template<typename T> constexpr bool name<T, std::void_t<__VA_ARGS__>> = true;
 
     check(has_pop, decltype(std::declval<T>().pop()));
@@ -42,8 +42,8 @@ namespace suzukaze {
 #undef check
 
     struct Any { template<typename T> operator T(); };
-    template<std::size_t N> struct Tag : Tag<N - 1> {};
-    template<> struct Tag<0> {};
+    template<std::size_t N> struct Tag : Tag<N - 1> { };
+    template<> struct Tag<0> { };
     template<typename T> constexpr auto size_(Tag<0>) -> decltype(0u) { return 0; }
     template<typename T> constexpr auto size_(Tag<1>) -> decltype(T{ Any{} }, 0) { return 1; }
     template<typename T> constexpr auto size_(Tag<2>) -> decltype(T{ Any{}, Any{} }, 0) { return 2; }
@@ -71,11 +71,11 @@ namespace suzukaze {
         template<typename T, typename ...U>
         Debug(const int line, std::string &&names, const T &arg, const U &...args) : names(std::move(names)) {
             sout << ".." << line << "..\t";
-            if constexpr ((is_iterable<T> || std::is_pointer_v<T> || has_pop<T> || has_front<T> || has_top<T>) && (std::is_arithmetic_v<U> && ...))
+            if constexpr (!is_string<T> && (is_iterable<T> || std::is_pointer_v<T> || has_pop<T> || has_front<T> || has_top<T>) && (std::is_arithmetic_v<U> && ...))
                 print(arg, false, args...);
             else
                 print(arg, false), (..., print(args, true));
-            std::cerr << sout.str() << "\n";
+            std::clog << sout.str() << std::endl;
         }
 
         Debug(const int line, const std::string &names) { std::cerr << "-------------------------------\n"; }

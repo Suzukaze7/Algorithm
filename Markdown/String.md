@@ -1,6 +1,7 @@
 - [字符串](#字符串)
   - [KMP](#kmp)
   - [Trie树](#trie树)
+  - [字符串哈希](#字符串哈希)
   - [AC自动机](#ac自动机)
   - [Border/Fail树的一些性质](#borderfail树的一些性质)
     - [求串的出现次数](#求串的出现次数)
@@ -78,6 +79,82 @@ struct Trie {
         }
 
         return x ^ d[p];
+    }
+};
+```
+
+## 字符串哈希
+
+```cpp
+struct Hash {
+    using ll = long long;
+    static constexpr int P = 13331, MOD1 = 1e9 + 7, MOD2 = 1e9 + 9;
+    static inline int pow1[N], pow2[N];
+    static inline int _ = [] {
+        pow1[0] = pow2[0] = 1;
+        for (int i = 1; i < N; i++)
+            pow1[i] = (ll)pow1[i - 1] * P % MOD1,
+            pow2[i] = (ll)pow2[i - 1] * P % MOD2;
+        return 0;
+    }();
+
+    char s[N];
+    int hs1[N], hs2[N];
+
+    void op() {
+        for (int i = 1; s[i]; i++)
+            hs1[i] = ((ll)hs1[i - 1] * P + s[i - 1]) % MOD1,
+            hs2[i] = ((ll)hs2[i - 1] * P + s[i - 1]) % MOD2;
+    }
+
+    pair<int, int> get(int l, int r) {
+        int d = r - l + 1;
+        return make_pair(((hs1[r] - (ll)hs1[l - 1] * pow1[d]) % MOD1 + MOD1) % MOD1,
+            ((hs2[r] - (ll)hs2[l - 1] * pow2[d]) % MOD2 + MOD2) % MOD2);
+    }
+};
+
+// 判断回文串
+struct Pal {
+    struct Hash {
+        using ll = long long;
+        static constexpr int P = 13331, MOD1 = 1e9 + 7, MOD2 = 1e9 + 9;
+        static inline int pow1[N], pow2[N];
+        static inline int _ = [] {
+            pow1[0] = pow2[0] = 1;
+            for (int i = 1; i < N; i++)
+                pow1[i] = (ll)pow1[i - 1] * P % MOD1,
+                pow2[i] = (ll)pow2[i - 1] * P % MOD2;
+            return 0;
+        }();
+
+        char s[N];
+        int hs1[N], hs2[N];
+
+        void op() {
+            for (int i = 1; s[i]; i++)
+                hs1[i] = ((ll)hs1[i - 1] * P + s[i]) % MOD1,
+                hs2[i] = ((ll)hs2[i - 1] * P + s[i]) % MOD2;
+        }
+
+        pair<int, int> get(int l, int r) {
+            int d = r - l + 1;
+            return make_pair(((hs1[r] - (ll)hs1[l - 1] * pow1[d]) % MOD1 + MOD1) % MOD1,
+                ((hs2[r] - (ll)hs2[l - 1] * pow2[d]) % MOD2 + MOD2) % MOD2);
+        }
+    }hs1, hs2;
+
+    int size;
+
+    void op() {
+        size = strlen(hs1.s + 1);
+        strcpy(hs2.s + 1, hs1.s + 1);
+        reverse(hs2.s + 1, hs2.s + 1 + size);
+        hs1.op(), hs2.op();
+    }
+
+    bool is_pal(int l, int r) {
+        return hs1.get(l, r) == hs2.get(size - r + 1, size - l + 1);
     }
 };
 ```
@@ -201,7 +278,7 @@ struct Manacher {
             s[++size] = t[i], s[++size] = '#';
 
         for (int i = 1; i <= size; i++)
-            get(i, min(len[p * 2 - i], r - i + 1));
+            get(i, i > r ? 0 : min(len[p * 2 - i], r - i + 1));
     }
 };
 ```
