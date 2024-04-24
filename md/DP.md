@@ -5,46 +5,54 @@
 - debug建议打表
 
 ### 基环树dp
+
 - 无自环`i = (from ^ 1)`
 - 有自环建反边，并把自环点标记
+- 如果不是基环树(即不止一个环)不能这样找
+
+#### 找单个环
+
+- 每次 `cidx` 置 0，通过 `cidx` 判断有无环
+
 ```cpp
+int h[N], e[N << 1], ne[N << 1], idx;
 bool book[N], ins[N];
 int pu[N], pw[N];
-int cir[N], ed[N], cnt;
-int s[N];
+int cir[N], ed[N], cidx;
+int sz[N], son[N];
 
-void dfs_c(int u, int from)
-{
+void add(int a, int b) {
+    e[idx] = b, ne[idx] = h[a], h[a] = idx++;
+}
+
+void dfs_c(int u, int from = -1) {
     book[u] = ins[u] = true;
 
-    for (int i = h[u]; ~i; i = ne[i])
-    {
-        int j = e[i];
-
+    for (int i = h[u]; ~i; i = ne[i]) {
+        int sn = e[i];
         if (i == (from ^ 1))
             continue;
 
-        pu[j] = u, pw[j] = w[i];
+        pu[sn] = u;
 
-        if (!book[j])
-            dfs_c(j, i);
-        else if (ins[j])
-        {
-            cnt++;
-            ed[cnt] = ed[cnt - 1];
-            ll sum = w[i];
-            for (int i = u; i != j; i = pu[i])
-            {
-                s[i] = sum;
-                sum += pw[i];
-                cir[++ed[cnt]] = i;
-            }
-            s[j] = sum, cir[++ed[cnt]] = j;
+        if (!book[sn])
+            dfs_c(sn, i);
+        else if (ins[sn]) {
+            for (int ne = u; ne != sn; ne = pu[ne])
+                cir[++cidx] = ne;
+            cir[++cidx] = sn;
         }
     }
 
     ins[u] = false;
 }
+
+// 多个环
+cidx++;
+ed[cidx] = ed[cidx - 1];
+for (int ne = u; ne != sn; ne = pu[ne])
+    cir[++ed[cidx]] = ne;
+cir[++ed[cidx]] = sn;
 ```
 
 ### 四边形不等式dp

@@ -8,6 +8,7 @@
     - [启发式合并](#启发式合并)
   - [莫队](#莫队)
   - [树链剖分](#树链剖分)
+  - [欧拉序](#欧拉序)
   - [LCT](#lct)
     - [将边权转化为点权](#将边权转化为点权)
   - [DLX](#dlx)
@@ -56,8 +57,15 @@ struct LCA {
         for (int i = M - 1; ~i; i--)
             if (fa[u][i] != fa[v][i])
                 u = fa[u][i], v = fa[v][i];
-        
+
         return fa[u][0];
+    }
+
+    int up(int u, int len) {
+        for (int i = M - 1; ~i; i--)
+            if (1 << i <= len)
+                u = fa[u][i], len -= 1 << i;
+        return u;
     }
 };
 ```
@@ -67,8 +75,8 @@ struct LCA {
 ### 普通
 
 ```cpp
+template<typename T = int>
 struct BIT {
-    using T = ll;
     T tr[N];
 
     void add(int k, T x) {
@@ -95,7 +103,7 @@ struct BIT {
 template<typename T = int>
 struct SegBIT {
     // BIT
-    BIT bit1, bit2;
+    BIT<T> bit1, bit2;
 
     void add(int l, int r, T x) {
         bit1.add(l, x), bit1.add(r + 1, -x);
@@ -145,28 +153,52 @@ struct ST {
 - 空树插入时可以直接插入
 
 ```cpp
+template<typename T = int>
 struct Splay {
+#define op <
+    static constexpr T INF = 0x3f3f3f3f3f3f3f3f;
+
+    struct Lazy { int rev; };
+
     struct Node {
         int s[2], p, sz;
-        int v;
+        T v;
+        Lazy lazy;
     }tr[N];
     int root, idx;
 
-    void init() {
-        root = idx = 0;
-    }
-
-    void init(int u, int _p, int _v) {
+    void init(int u, int p_, T v_) {
         tr[u] = {};
         auto &p = tr[u];
-        p.p = _p, p.v = _v, p.sz = 1;
+        p.p = p_, p.v = v_, p.sz = 1;
+    }
+
+    void add(int u, const Lazy &lazy) {
+        if (!u)
+            return;
+
+        auto &p = tr[u];
     }
 
     void push_up(int u) {
-        tr[u].sz = tr[tr[u].s[0]].sz + tr[tr[u].s[1]].sz + 1;
+        auto &p = tr[u], &l = tr[p.s[0]], &r = tr[p.s[1]];
+        p.sz = l.sz + r.sz + 1;
+    }
+
+    Splay() { init(); }
+
+    void init() {
+        init(1, 0, -INF), init(2, 1, INF);
+        tr[1].s[1] = 2;
+        push_up(1);
+        root = 1, idx = 2;
     }
 
     void push_down(int u) {
+        auto &p = tr[u];
+        add(tr[u].s[0], p.lazy);
+        add(tr[u].s[1], p.lazy);
+        p.lazy = {};
     }
 
     void rotate(int x) {
@@ -196,6 +228,7 @@ struct Splay {
     }
 
     int get(int k) {
+        k++;
         int u = root;
         while (u) {
             push_down(u);
@@ -210,44 +243,34 @@ struct Splay {
         return u ? u : -1;
     }
 
-    int get_rk(int x) {
+    int get_rk(T x) {
         int u = root, cnt = 0;
         while (true) {
             push_down(u);
-            if (tr[u].v < x)
+            if (tr[u].v op x)
                 cnt += tr[tr[u].s[0]].sz + 1, u = tr[u].s[1];
             else if (tr[u].v == x)
-                return cnt + tr[tr[u].s[0]].sz + 1;
+                return cnt + tr[tr[u].s[0]].sz + 1 - 1;
             else
                 u = tr[u].s[0];
         }
     }
 
-    void insert1(int x) { // 按值大小插入
+    //按值大小插入
+    void insert(T x) {
         int p = 0, u = root;
         while (u) {
             push_down(u);
-            p = u, u = tr[u].s[tr[u].v < x];
+            p = u, u = tr[u].s[tr[u].v op x];
         }
 
-        tr[p].s[tr[p].v < x] = u = ++idx;
+        tr[p].s[tr[p].v op x] = u = ++idx;
         init(u, p, x);
         splay(u, 0);
     }
 
-    void insert2(int x) { // 插入到最后
-        int p = 0, u = root;
-        while (u) {
-            push_down(u);
-            p = u, u = tr[u].s[1];
-        }
-
-        tr[p].s[1] = u = ++idx;
-        init(u, p, x);
-        splay(u, 0);
-    }
-
-    void insert3(int k, int x) { // 插入到第k个数后，需要有首尾哨兵
+    //插入到第k个数后
+    void insert_next(int k, T x) {
         int l = get(k), r = get(k + 1);
         splay(l, 0), splay(r, l);
 
@@ -256,7 +279,10 @@ struct Splay {
         push_up(r), push_up(l);
     }
 
-    void erase(int x) {
+    //插入到最后
+    void insert_last(T x) { insert_next(tr[root].sz - 2, x); }
+
+    void erase(T x) {
         int k = get_rk(x);
         int l = get(k - 1), r = get(k + 1);
 
@@ -265,40 +291,30 @@ struct Splay {
         push_up(r), push_up(l);
     }
 
-    int get_pre(int u, int x) {
-        if (!u)
-            return -INF;
-
-        push_down(u);
-
-        if (tr[u].v > x)
-            return get_pre(tr[u].s[0], x);
-        else
-            return max(tr[u].v, get_pre(tr[u].s[1], x));
+    void modify(int l, int r, const Lazy &lazy) {
+        l = get(l - 1), r = get(r + 1);
+        splay(l, 0), splay(r, l);
+        add(tr[r].s[0], lazy);
     }
 
-    int get_aft(int u, int x) {
-        if (!u)
-            return INF;
-
-        push_down(u);
-
-        if (tr[u].v < x)
-            return get_aft(tr[u].s[1], x);
-        else
-            return min(tr[u].v, get_aft(tr[u].s[0], x));
+    Node query(int l, int r) {
+        l = get(l - 1), r = get(r + 1);
+        splay(l, 0), splay(r, l);
+        return tr[tr[r].s[0]];
     }
 
-    void print(int u) {
+    void dfs(int u) {
         if (!u)
             return;
 
         push_down(u);
 
-        print(tr[u].s[0]);
-        cout << tr[u].v << " ";
-        print(tr[u].s[1]);
+        dfs(tr[u].s[0]);
+        if (u != 1 && u != 2)
+            cout << tr[u].v;
+        dfs(tr[u].s[1]);
     }
+#undef op
 };
 ```
 
@@ -458,18 +474,37 @@ Val query_path(int u, int v)
 }
 ```
 
+## 欧拉序
+
+```cpp
+struct ETTree {
+    vector<int> h[N];
+    int dfn[N], first[N], last[N], idx;
+
+    void dfs(int u = 1, int p = 0) {
+        dfn[++idx] = u, first[u] = idx;
+        for (auto sn : h[u]) {
+            if (sn == p)
+                continue;
+            dfs(sn, u);
+        }
+        dfn[++idx] = u, last[u] = idx;
+    }
+};
+```
+
 ## LCT
 
 ```cpp
 struct LCT {
     struct Node {
         int s[2], v, p;
-        int sum, lazy_rev;
+        int lazy_rev;
     }tr[N];
+    int stk[N], top;
 
     void push_up(int u) {
         auto &p = tr[u], &l = tr[p.s[0]], &r = tr[p.s[1]];
-        p.sum = p.v ^ l.sum ^ r.sum;
     }
 
     void push_down(int u) { // 如果是求和一类的需要判断子节点是否为0

@@ -86,6 +86,26 @@ struct Trie {
 ## 字符串哈希
 
 ```cpp
+using ll = long long;
+mt19937 rng(random_device{}());
+constexpr int prm[10] = { 9,31,183,381,861,1771,1953,2217,2319,2493 };
+const ll P = prm[rng() % 10] + ll(1e18);
+constexpr int X = 131;
+ll mul(ll a, ll b) {
+    ll c = (ll)a * b - (ll)((long double)a / P * b + 0.5L) * P;
+    return c < 0 ? c + P : c;
+}
+ll norm(ll x) {
+    return x < 0 ? x + P : x >= P ? x - P : x;
+}
+ll powX[N];
+int _ = [] {
+    powX[0] = 1;
+    for (int i = 1; i < N; i++)
+        powX[i] = mul(powX[i - 1], X);
+    return 0;
+}();
+
 struct Hash {
     using ll = long long;
     static constexpr int P = 13331, MOD1 = 1e9 + 7, MOD2 = 1e9 + 9;
