@@ -25,6 +25,9 @@ namespace suzukaze {
 
     template<typename T> constexpr bool is_string = std::is_convertible_v<T, std::string>;
 
+    template<typename T> constexpr bool is_pair = false;
+    template<typename T, typename U> constexpr bool is_pair<std::pair<T, U>> = true;
+
     template<typename T> constexpr bool is_tuple = false;
     template<typename ...T> constexpr bool is_tuple<std::tuple<T...>> = true;
 
@@ -63,22 +66,22 @@ namespace suzukaze {
     class Debug {
         const std::string in_sep = ',' + std::string(IN_LEN, ' '), out_blank = std::string(OUT_LEN, ' '),
             out_sep = out_blank + '|' + out_blank, equal = out_blank + '=' + out_blank;
+        const std::string names;
         std::ostringstream sout;
-        std::string names;
-        std::string::size_type idx = 0, cover = 0;
+        std::size_t idx = 0, cover = 0;
 
     public:
         template<typename T, typename ...U>
         Debug(const int line, std::string &&names, const T &arg, const U &...args) : names(std::move(names)) {
             sout << ".." << line << "..\t";
-            if constexpr (!is_string<T> && (is_iterable<T> || std::is_pointer_v<T> || has_pop<T> || has_front<T> || has_top<T>) && (std::is_arithmetic_v<U> && ...))
+            if constexpr (!is_string<T> && (is_iterable<T> || std::is_pointer_v<T> || has_pop<T>) && (std::is_arithmetic_v<U> && ...))
                 print(arg, false, args...);
             else
                 print(arg, false), (..., print(args, true));
             std::clog << sout.str() << std::endl;
         }
 
-        Debug(const int line, const std::string &names) { std::cerr << "-------------------------------\n"; }
+        Debug(const int, const std::string &) { std::clog << "-------------------------------" << std::endl; }
 
     private:
         void print_in_sep(bool flag = true) { if (flag) sout << in_sep; }
@@ -111,7 +114,7 @@ namespace suzukaze {
                 sout << arg;
             else if constexpr (is_string<T>)
                 sout << '"' << arg << '"';
-            else if constexpr (std::__is_pair<T>)
+            else if constexpr (is_pair<T>)
                 sout << '(', print_(arg.first), print_in_sep(), print_(arg.second), sout << ')';
             else if constexpr (is_iterable<T>) {
                 sout << '[';

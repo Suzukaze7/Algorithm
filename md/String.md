@@ -38,6 +38,37 @@ struct KMP {
         }
     }
 };
+
+struct KMP {
+    int size;
+    string s;
+    int ne[N];
+
+    void init(const string &t) { s = " " + t, size = t.size(); }
+
+    void op() {
+        size = s.size() - 1;
+        for (int i = 2, j = 0; i <= size; i++) {
+            while (j && s[i] != s[j + 1])
+                j = ne[j];
+            if (s[i] == s[j + 1])
+                j++;
+            ne[i] = j;
+        }
+    }
+
+    bool in(const string t) {
+        for (int i = 0, j = 0; i < t.size(); i++) {
+            while (j && s[j + 1] != t[i])
+                j = ne[j];
+
+            if (s[j + 1] == t[i])
+                if (++j == size)
+                    return true;
+        }
+        return false;
+    }
+};
 ```
 
 ## Trie树
