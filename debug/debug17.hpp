@@ -1,8 +1,9 @@
 #pragma once
 #include<iostream>
 #include<sstream>
+#include<tuple>
 
-std::ostream &operator<<(std::ostream &out, __int128_t a) {
+inline std::ostream &operator<<(std::ostream &out, __int128_t a) {
     if (!a) return out << 0;
     if (a < 0) {
         out << '-';
@@ -19,24 +20,28 @@ std::ostream &operator<<(std::ostream &out, __int128_t a) {
 #define debug(...) suzukaze::Debug(__LINE__, #__VA_ARGS__ __VA_OPT__(,) __VA_ARGS__)
 
 namespace suzukaze {
-    constexpr int OUT_LEN = 1;
-    constexpr int IN_LEN = 1;
-    constexpr bool SPLIT = false;
+    inline constexpr int OUT_LEN = 1;
+    inline constexpr int IN_LEN = 1;
+    inline constexpr bool SPLIT = false;
 
+    template<typename T> inline constexpr bool is_string = std::is_convertible_v<T, std::string_view>;
     template<typename T> constexpr bool is_string = std::is_convertible_v<T, std::string>;
 
     template<typename T> constexpr bool is_pair = false;
     template<typename T, typename U> constexpr bool is_pair<std::pair<T, U>> = true;
 
-    template<typename T> constexpr bool is_tuple = false;
-    template<typename ...T> constexpr bool is_tuple<std::tuple<T...>> = true;
+    template<typename T> inline constexpr bool is_pair = false;
+    template<typename T, typename U> inline constexpr bool is_pair<std::pair<T, U>> = true;
 
-    template<typename T, typename = std::void_t<>> constexpr bool is_iterable = false;
-    template<typename T> constexpr bool is_iterable<T, std::void_t<decltype(std::begin(std::declval<T &>())), decltype(std::end(std::declval<T &>()))>> = true;
+    template<typename T> inline constexpr bool is_tuple = false;
+    template<typename ...T> inline constexpr bool is_tuple<std::tuple<T...>> = true;
+
+    template<typename T, typename = std::void_t<>> inline constexpr bool is_iterable = false;
+    template<typename T> inline constexpr bool is_iterable<T, std::void_t<decltype(std::begin(std::declval<T &>())), decltype(std::end(std::declval<T &>()))>> = true;
 
 #define check(name, ...) \
-    template<typename, typename = std::void_t<>> constexpr bool name = false;\
-    template<typename T> constexpr bool name<T, std::void_t<__VA_ARGS__>> = true;
+    template<typename, typename = std::void_t<>> inline constexpr bool name = false;\
+    template<typename T> inline constexpr bool name<T, std::void_t<__VA_ARGS__>> = true;
 
     check(has_pop, decltype(std::declval<T>().pop()));
     check(has_top, decltype(std::declval<T>().top()));
@@ -47,16 +52,16 @@ namespace suzukaze {
     struct Any { template<typename T> operator T(); };
     template<std::size_t N> struct Tag : Tag<N - 1> { };
     template<> struct Tag<0> { };
-    template<typename T> constexpr auto size_(Tag<0>) -> decltype(0u) { return 0; }
-    template<typename T> constexpr auto size_(Tag<1>) -> decltype(T{ Any{} }, 0) { return 1; }
-    template<typename T> constexpr auto size_(Tag<2>) -> decltype(T{ Any{}, Any{} }, 0) { return 2; }
-    template<typename T> constexpr auto size_(Tag<3>) -> decltype(T{ Any{}, Any{}, Any{} }, 0) { return 3; }
-    template<typename T> constexpr auto size_(Tag<4>) -> decltype(T{ Any{}, Any{}, Any{}, Any{} }, 0) { return 4; }
-    template<typename T> constexpr auto size_(Tag<5>) -> decltype(T{ Any{}, Any{}, Any{}, Any{}, Any{} }, 0) { return 5; }
-    template<typename T> constexpr auto size_(Tag<6>) -> decltype(T{ Any{}, Any{}, Any{}, Any{}, Any{}, Any{} }, 0) { return 6; }
-    template<typename T> constexpr auto size_(Tag<7>) -> decltype(T{ Any{}, Any{}, Any{}, Any{}, Any{}, Any{}, Any{} }, 0) { return 7; }
-    template<typename T> constexpr auto size_(Tag<8>) -> decltype(T{ Any{}, Any{}, Any{}, Any{}, Any{}, Any{}, Any{}, Any{} }, 0) { return 8; }
-    template<typename T> constexpr auto size() {
+    template<typename T> inline constexpr auto size_(Tag<0>) -> decltype(0u) { return 0; }
+    template<typename T> inline constexpr auto size_(Tag<1>) -> decltype(T{ Any{} }, 0) { return 1; }
+    template<typename T> inline constexpr auto size_(Tag<2>) -> decltype(T{ Any{}, Any{} }, 0) { return 2; }
+    template<typename T> inline constexpr auto size_(Tag<3>) -> decltype(T{ Any{}, Any{}, Any{} }, 0) { return 3; }
+    template<typename T> inline constexpr auto size_(Tag<4>) -> decltype(T{ Any{}, Any{}, Any{}, Any{} }, 0) { return 4; }
+    template<typename T> inline constexpr auto size_(Tag<5>) -> decltype(T{ Any{}, Any{}, Any{}, Any{}, Any{} }, 0) { return 5; }
+    template<typename T> inline constexpr auto size_(Tag<6>) -> decltype(T{ Any{}, Any{}, Any{}, Any{}, Any{}, Any{} }, 0) { return 6; }
+    template<typename T> inline constexpr auto size_(Tag<7>) -> decltype(T{ Any{}, Any{}, Any{}, Any{}, Any{}, Any{}, Any{} }, 0) { return 7; }
+    template<typename T> inline constexpr auto size_(Tag<8>) -> decltype(T{ Any{}, Any{}, Any{}, Any{}, Any{}, Any{}, Any{}, Any{} }, 0) { return 8; }
+    template<typename T> inline constexpr auto size() {
         if constexpr (std::is_aggregate_v<T>)
             return size_<T>(Tag<8>{});
         else
@@ -66,14 +71,17 @@ namespace suzukaze {
     class Debug {
         const std::string in_sep = ',' + std::string(IN_LEN, ' '), out_blank = std::string(OUT_LEN, ' '),
             out_sep = out_blank + '|' + out_blank, equal = out_blank + '=' + out_blank;
+        std::string_view names;
         const std::string names;
         std::ostringstream sout;
+        std::size_t idx = 0, cover = 0;
         std::size_t idx = 0, cover = 0;
 
     public:
         template<typename T, typename ...U>
-        Debug(const int line, std::string &&names, const T &arg, const U &...args) : names(std::move(names)) {
+        Debug(int line, std::string_view names, const T &arg, const U &...args) : names(names) {
             sout << ".." << line << "..\t";
+            if constexpr (!is_string<T> && (is_iterable<T> || std::is_pointer_v<T> || has_pop<T>) && (std::is_arithmetic_v<U> && ...))
             if constexpr (!is_string<T> && (is_iterable<T> || std::is_pointer_v<T> || has_pop<T>) && (std::is_arithmetic_v<U> && ...))
                 print(arg, false, args...);
             else
@@ -81,6 +89,7 @@ namespace suzukaze {
             std::clog << sout.str() << std::endl;
         }
 
+        Debug(const int, const std::string &) { std::clog << "-------------------------------" << std::endl; }
         Debug(const int, const std::string &) { std::clog << "-------------------------------" << std::endl; }
 
     private:
@@ -114,6 +123,7 @@ namespace suzukaze {
                 sout << arg;
             else if constexpr (is_string<T>)
                 sout << '"' << arg << '"';
+            else if constexpr (is_pair<T>)
             else if constexpr (is_pair<T>)
                 sout << '(', print_(arg.first), print_in_sep(), print_(arg.second), sout << ')';
             else if constexpr (is_iterable<T>) {

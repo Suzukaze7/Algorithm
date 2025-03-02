@@ -1,17 +1,14 @@
-### 合法状态
+## 合法状态
 - 唯一原则：可以转移到不合法状态，但是不能从不合法状态转移或者不合法状态没有影响
 
-### 数位dp
+## 数位dp
 - debug建议打表
 
-### 基环树dp
+## 基环树dp
 
 - 无自环`i = (from ^ 1)`
-- 有自环建反边，并把自环点标记
+- 有自环建一条边，并把自环点标记
 - 如果不是基环树(即不止一个环)不能这样找
-
-#### 找单个环
-
 - 每次 `cidx` 置 0，通过 `cidx` 判断有无环
 
 ```cpp
@@ -19,7 +16,6 @@ int h[N], e[N << 1], ne[N << 1], idx;
 bool book[N], ins[N];
 int pu[N], pw[N];
 int cir[N], ed[N], cidx;
-int sz[N], son[N];
 
 void add(int a, int b) {
     e[idx] = b, ne[idx] = h[a], h[a] = idx++;

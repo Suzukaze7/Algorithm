@@ -5,8 +5,8 @@ int main() {
     std::ifstream fin("cpp_to_json\\in.txt");
     std::ofstream fout("cpp_to_json\\out.txt");
 
-    fout << "\"prefix\": \"#\",\n";
-    fout << "\"body\": [\n";
+    fout << R"("prefix": "@",)" << std::endl;
+    fout << R"("body": [)" << std::endl;
 
     std::string line;
     while (std::getline(fin, line)) {

@@ -2,8 +2,6 @@
   - [普通build](#普通build)
   - [扫描线](#扫描线)
   - [主席树](#主席树)
-    - [普通](#普通)
-    - [二分求区间第 k 小](#二分求区间第-k-小)
   - [动态开点](#动态开点)
 
 
@@ -144,8 +142,6 @@ struct SegTree {
 
 ## 主席树
 
-### 普通
-
 ```cpp
 struct SegTree {
     struct Val { };
@@ -206,6 +202,18 @@ struct SegTree {
     }
 };
 
+// 二分求第 k 小
+int query(int u, int v, int l, int r, int k) {
+    if (l == r)
+        return l;
+
+    int mid = l + r >> 1, t = mid - l + 1 - (tr[tr[u].lc].sum - tr[tr[v].lc].sum);
+    if (k <= t)
+        return query(tr[u].lc, tr[v].lc, l, mid, k);
+    else
+        return query(tr[u].rc, tr[v].rc, mid + 1, r, k - t);
+}
+
 //树链剖分
 Val query_path(int rt, int u, int v) {
     Val res = {};
@@ -227,67 +235,6 @@ Val query_path(int rt, int u, int v) {
 }
 ```
 
-### 二分求区间第 k 小
-
-```cpp
-struct SegTree {
-    struct Val { };
-    struct Node {
-        int lc, rc;
-        Val val;
-    } tr[N * 25];
-    int root[N], idx;
-
-    friend Val operator+(const Val &lhs, const Val &rhs) {
-        return {};
-    }
-
-    void push_up(int u) {
-        auto &p = tr[u], &l = tr[p.lc], &r = tr[p.rc];
-        p.val = l.val + r.val;
-    }
-
-    void build(int &u, int l, int r) {
-        u = ++idx;
-        if (l == r)
-            return;
-
-        int mid = l + r >> 1;
-        build(tr[u].lc, l, mid), build(tr[u].rc, mid + 1, r);
-    }
-
-    void insert(int &u, int v, int l, int r, int k, const Val &val) {
-        u = ++idx;
-        if (l == r) {
-            tr[u].val = tr[v].val + val;
-            return;
-        }
-
-        int mid = l + r >> 1;
-        if (k <= mid) {
-            tr[u].rc = tr[v].rc;
-            insert(tr[u].lc, tr[v].lc, l, mid, k, val);
-        } else {
-            tr[u].lc = tr[v].lc;
-            insert(tr[u].rc, tr[v].rc, mid + 1, r, k, val);
-        }
-
-        push_up(u);
-    }
-
-    int query(int u, int v, int l, int r, int x) {
-        if (l == r)
-            return l;
-
-        int mid = l + r >> 1, t = mid - l + 1 - (tr[tr[u].lc].sum - tr[tr[v].lc].sum);
-        if (x <= t)
-            return query(tr[u].lc, tr[v].lc, l, mid, x);
-        else
-            return query(tr[u].rc, tr[v].rc, mid + 1, r, x - t);
-    }
-};
-```
-
 ## 动态开点
 
 - 单点修改，区间查询
@@ -296,56 +243,48 @@ struct SegTree {
 struct SegTree {
     struct Val { };
 
-    static inline struct Node {
+    struct Node {
         int lc, rc;
         Val val;
     }tr[N * 40];
-    static inline int idx;
+    int root, idx;
 
-    int root;
-
-    int get() {
-        return ++idx;
+    friend Val operator+(const Val &lhs, const Val &rhs) {
+        return { };
     }
 
-    Val merge(const Val &x, const Val &y) {
-    }
+    void modify(int &u, int l, int r, int k, const Val &val) {
+        if (!u)
+            u = ++idx;
 
-    void init() {
-        tr[root = get()] = {};
-    }
-
-    void modify(int u, int l, int r, int k, int x) {
         if (l == r) {
+            tr[u].val = tr[u].val + val;
             return;
         }
 
         auto &p = tr[u];
         int mid = l + r >> 1;
-        if (k <= mid) {
-            if (!p.lc)
-                tr[p.lc = get()] = {};
-            modify(p.lc, l, mid, k, x);
-        } else {
-            if (!p.rc)
-                tr[p.rc = get()] = {};
-            modify(p.rc, mid + 1, r, k, x);
-        }
+        if (k <= mid)
+            modify(p.lc, l, mid, k, val);
+        else
+            modify(p.rc, mid + 1, r, k, val);
 
         auto &lc = tr[p.lc], &rc = tr[p.rc];
-        p.val = merge(lc.val, rc.val);
+        p.val = lc.val + rc.val;
     }
 
     Val query(int u, int l, int r, int ql, int qr) {
+        if (!u)
+            return {};
         if (ql <= l && r <= qr)
             return tr[u].val;
 
         int mid = l + r >> 1;
         Val res = {};
-        if (l <= mid && tr[u].lc)
+        if (l <= mid)
             res = query(tr[u].lc, l, mid, ql, qr);
-        if (mid < r && tr[u].rc)
-            res = merge(res, query(tr[u].rc, mid + 1, r, ql, qr));
+        if (mid < r)
+            res = res + query(tr[u].rc, mid + 1, r, ql, qr);
 
         return res;
     }

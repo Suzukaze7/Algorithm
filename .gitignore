@@ -5,10 +5,8 @@
 *.out
 /*.cpp
 /*.py
-exe
 out
 
 hack/*
-!hack/debug.cpp
 !hack/*.ps1
 !hack/*.sh

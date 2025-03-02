@@ -1,6 +1,7 @@
 - [字符串](#字符串)
   - [KMP](#kmp)
-  - [Trie树](#trie树)
+  - [扩展KMP](#扩展kmp)
+  - [01Trie](#01trie)
   - [字符串哈希](#字符串哈希)
   - [AC自动机](#ac自动机)
   - [Border/Fail树的一些性质](#borderfail树的一些性质)
@@ -23,13 +24,11 @@
 
 ```cpp
 struct KMP {
-    int size;
     char s[N];
     int ne[N];
 
     void op() {
-        size = strlen(s + 1);
-        for (int i = 2, j = 0; i <= size; i++) {
+        for (int i = 2, j = 0; s[i]; i++) {
             while (j && s[i] != s[j + 1])
                 j = ne[j];
             if (s[i] == s[j + 1])
@@ -71,21 +70,44 @@ struct KMP {
 };
 ```
 
-## Trie树
+## 扩展KMP
 
 ```cpp
+struct ExKMP {
+    int size;
+    char s[N];
+    int z[N];
+
+    void op() {
+        size = strlen(s + 1);
+        for (int i = 2, l = 1, r = 1; i <= size; i++) {
+            z[i] = i > r ? 0 : min(z[i - l + 1], r - i + 1);
+            while (i + z[i] <= size && s[i + z[i]] == s[1 + z[i]])
+                z[i]++;
+            if (i + z[i] - 1 > r)
+                l = i, r = i + z[i] - 1;
+        }
+    }
+};
+```
+
+## 01Trie
+
+```cpp
+template<typename T = int>
 struct Trie {
-    static constexpr int M = 31;
+    static constexpr int M = is_same_v<T, int> ? 31 : 63;
     int tr[N * M][2], idx;
-    int d[N * M], to[N], from[N * M];
+    int to[N], from[N * M];
+    T d[N * M];
 
     void init() {
-        for (int i = 1; i <= idx; i++)
+        for (int i = 0; i <= idx; i++)
             tr[i][0] = tr[i][1] = from[i] = d[i] = 0;
         idx = 0;
     }
 
-    void insert(int k, int x) {
+    void insert(int k, T x) {
         int p = 0;
         for (int i = M - 1; ~i; i--) {
             int u = x >> i & 1;
@@ -99,8 +121,8 @@ struct Trie {
         from[p] = k;
     }
 
-    int query(int k) {
-        int x = a[k], p = 0;
+    T query(T x) {
+        int p = 0;
         for (int i = M - 1; ~i; i--) {
             int u = x >> i & 1;
             if (tr[p][u ^ 1])

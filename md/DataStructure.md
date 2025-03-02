@@ -624,11 +624,11 @@ struct DLX {
     int idx;
     int res[N], top;
 
-    void init() {
-        for (int i = 0; i <= m; i++)
+    void init(int col) {
+        for (int i = 0; i <= col; i++)
             nd[i].l = i - 1, nd[i].r = i + 1, nd[i].u = nd[i].d = i;
-        nd[0].l = m, nd[m].r = 0;
-        idx = m + 1;
+        nd[0].l = col, nd[col].r = 0;
+        idx = col + 1;
     }
 
     void add(int &hh, int &tt, int x, int y) {
@@ -700,11 +700,11 @@ struct DLX {
     int res[N];
     bool book[N];
 
-    void init() {
-        for (int i = 0; i <= m; i++)
+    void init(int col) {
+        for (int i = 0; i <= col; i++)
             nd[i].l = i - 1, nd[i].r = i + 1, nd[i].u = nd[i].d = i;
-        nd[0].l = m, nd[m].r = 0;
-        idx = m + 1;
+        nd[0].l = col, nd[col].r = 0;
+        idx = col + 1;
     }
 
     void add(int &hh, int &tt, int x, int y) {
@@ -1084,7 +1084,7 @@ struct CDQ {
 
         inplace_merge(nd + l, nd + mid + 1, nd + r + 1, [](const Node &x, const Node &y) {
             return x.b < y.b;
-            });
+        });
     }
 
     void op() {
@@ -1138,20 +1138,19 @@ void solve() {
 ## 笛卡尔树
 
 ```cpp
+template<typename cmp = less<int>>
 struct CarTree {
     struct Node {
         int k, w, s[2];
-
-        bool operator<(const Node &oth) const { return k < oth.k; }
     }tr[N];
     int root, stk[N], top;
 
     void build() {
-        sort(tr + 1, tr + 1 + n);
+        cmp c;
         for (int i = 1; i <= n; i++) {
             auto &cur = tr[i];
             cur.s[0] = cur.s[1] = 0;
-            while (top && tr[stk[top - 1]].w > cur.w)
+            while (top && c(cur.w, tr[stk[top - 1]].w))
                 cur.s[0] = stk[--top];
             if (top)
                 tr[stk[top - 1]].s[1] = i;

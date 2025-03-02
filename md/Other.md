@@ -33,3 +33,11 @@ void print(Int x)
     putchar(x % 10 + '0');
 }
 ```
+
+## 一些内建函数
+
+- `__builtin_popcount(unsigned x)`: x 的二进制下 1 的个数
+- `__builtin_ctz(unsigned x)`: x 的二进制下低位连续 0 的个数，x == 0 未定义
+- `__builtin_clz(unsigned x)`: x 的二进制下高位连续 0 的个数，x == 0 未定义
+
+这些函数都有三个版本，在函数末尾加 `l`、`ll` 代表 ul、ull
